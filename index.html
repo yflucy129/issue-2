@@ -155,9 +155,6 @@ button{font:inherit;color:inherit}
 .play{grid-row:3 / span 6;grid-column:1 / -1;position:relative;min-width:0;min-height:0}
 .play > *{position:absolute}
 .ownmark{position:absolute;border:3px solid var(--ink);pointer-events:none;z-index:8}
-.flood{position:absolute;left:0;right:0;top:0;height:120%;background:var(--pink);z-index:30;pointer-events:none;transform:translateY(100%)}
-.flood svg{position:absolute;left:0;top:calc(var(--ch) * -.3 + 1px);width:200%;height:calc(var(--ch) * .3);animation:waveX 1.8s linear infinite}
-.flood svg path{fill:var(--pink)}
 @keyframes waveX{to{transform:translateX(-50%)}}
 .cue{outline:2px solid transparent;outline-offset:4px;animation:cue 1.4s ease-in-out infinite}
 @keyframes cue{0%,100%{outline-color:transparent}50%{outline-color:var(--ink)}}
@@ -350,6 +347,18 @@ button{font:inherit;color:inherit}
 
 .navarrow{overflow:hidden}
 .navarrow .ico{width:56%;height:56%}
+
+/* the finishing fill: pink tiles pressed into the grid, cell by cell */
+.mosaic{position:absolute;left:calc(var(--ox) - var(--cw));top:0;display:grid;z-index:30;pointer-events:none}
+.mosaic i{background:var(--pink);transform:scale(0);animation:tile .24s cubic-bezier(.3,1.5,.5,1) forwards}
+@keyframes tile{0%{transform:scale(.5)}100%{transform:scale(1)}}
+/* in the intermission the tiles are drawn blobs that overlap, so the grid never shows */
+.mosaic.drawnfill{animation:boil .42s steps(1) infinite}
+.mosaic.drawnfill i{border-radius:46% 54% 40% 60% / 55% 45% 58% 42%;animation-name:blobtile}
+.mosaic.drawnfill i:nth-child(3n){border-radius:60% 40% 52% 48% / 42% 58% 45% 55%}
+.mosaic.drawnfill i:nth-child(4n+1){border-radius:38% 62% 58% 42% / 50% 40% 60% 50%}
+@keyframes blobtile{0%{transform:scale(.6)}100%{transform:scale(1.55)}}
+@media (prefers-reduced-motion:reduce){.mosaic i{animation-duration:1ms}}
 </style>
 </head>
 <body>
@@ -603,8 +612,7 @@ const go = n => { location.hash = n ? 'sc-' + n : 'home'; };
 function makeScene(x) {
   const sec = document.createElement('section');
   sec.className = 'field scene'; sec.id = 'sc-' + x.n; sec.tabIndex = -1; sec.hidden = true; sec.setAttribute('aria-label', x.v.toLowerCase());
-  sec.innerHTML = `<div class="cells"><div class="open stage"></div></div>
-    <div class="flood"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path d="M0 12 Q12.5 0 25 12 T50 12 T75 12 T100 12 T125 12 T150 12 T175 12 T200 12 V20 H0Z"/></svg></div>`;
+  sec.innerHTML = `<div class="cells"><div class="open stage"></div></div>`;
   document.body.appendChild(sec);
   const stage = sec.querySelector('.stage');
   const word = x.v, c0 = Math.floor((8 - word.length) / 2) + 1;
@@ -687,20 +695,37 @@ addEventListener('keydown', e => {
   if (open && scenes[open] && e.target.tagName !== 'INPUT') scenes[open].hooks.key.forEach(f => f(e));
 });
 
-/* an action is done: a pink wave floods the page, then it folds back into its box */
+/* an action is done: the screen fills with pink one cell at a time, like tiles pressed into place,
+   from the bottom up, then it opens back onto the home page */
+function mosaic(sec, drawn, onFull) {
+  const old = sec.querySelector('.mosaic'); if (old) old.remove();
+  const m = document.createElement('div'); m.className = 'mosaic' + (drawn ? ' drawnfill' : ''); m.setAttribute('aria-hidden', 'true');
+  const cols = G.cols + 2, rows = G.vrows + 2;
+  m.style.gridTemplateColumns = `repeat(${cols}, var(--cw))`; m.style.gridTemplateRows = `repeat(${rows}, var(--ch))`;
+  const rowStep = reduced ? 0 : 820 / rows, jitter = reduced ? 0 : 380;
+  let last = 0;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const t = document.createElement('i'), d = (rows - 1 - r) * rowStep + Math.random() * jitter;
+    t.style.animationDelay = Math.round(d) + 'ms'; last = Math.max(last, d); m.appendChild(t);
+  }
+  sec.appendChild(m);
+  setTimeout(onFull, last + (reduced ? 0 : 240));
+}
 function complete(n) {
   const nextWas = pageOpen(page + 1);
   done.add(n); ss.set('verbing-done', [...done]);
   if (!nextWas && page + 1 < PAGES && pageOpen(page + 1)) nextCue = true;   /* the → arrow will pulse */
-  const s = scenes[n], fl = s.sec.querySelector('.flood');
+  const s = scenes[n];
   if (actDone(ALL[n - 1].act)) justFlooded = ALL[n - 1].act;
   /* a breath first: the finished action stays on screen for a moment */
   setTimeout(() => {
     if (open !== n) return;
-    const a = fl.animate([{ transform: 'translateY(100%)' }, { transform: 'translateY(0%)' }], { duration: reduced ? 1 : 1500, easing: 'cubic-bezier(.45,.05,.35,1)', fill: 'forwards' });
-    a.onfinish = () => {
-      setTimeout(() => { if (open === n) go(0); setTimeout(() => a.cancel(), 700); }, reduced ? 0 : 250);
-    };
+    mosaic(s.sec, !!ACTS[ALL[n - 1].act].lobby, () => {
+      setTimeout(() => {
+        if (open === n) go(0);
+        setTimeout(() => { const m = s.sec.querySelector('.mosaic'); if (m) m.remove(); }, 700);
+      }, reduced ? 0 : 250);
+    });
   }, reduced ? 0 : 800);
 }
 
