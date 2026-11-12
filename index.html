@@ -1,0 +1,1582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 Verbing</title>
+<style>
+:root{
+  --cw:75px; --ch:97px; --ox:0px; --cols:18;
+  --big:calc(var(--ch) * .88);
+  --mid:calc(var(--ch) * .42);
+  --body:clamp(12px, calc(var(--cw) * .2), 17px);
+  --small:clamp(9px, calc(var(--cw) * .14), 13px);
+  --box:clamp(8px, calc(var(--cw) * .14), 12px);
+  --mono:"Courier New", Courier, monospace;
+  --paper:#ffffff; --ink:#e6007e; --line:#f6aacf; --wash:#fde6f1;
+  --pink:#e6007e;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:#fff}
+body{color:var(--ink);font-family:var(--mono);font-size:var(--body);line-height:1.4;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* ---------- the grid: cells of one fixed proportion (8.5 : 11); unopened cells are struck ---------- */
+.field,#home{
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(to right,var(--line) 1px,transparent 1px),
+    linear-gradient(to bottom,var(--line) 1px,transparent 1px),
+    linear-gradient(to bottom right,transparent calc(50% - .5px),var(--line) calc(50% - .5px),var(--line) calc(50% + .5px),transparent calc(50% + .5px));
+  background-size:var(--cw) var(--ch);
+  background-position:var(--ox) 0;
+}
+.open{
+  position:relative;min-width:0;min-height:0;
+  background-color:var(--paper);
+  background-image:linear-gradient(to right,var(--line) 1px,transparent 1px),linear-gradient(to bottom,var(--line) 1px,transparent 1px);
+  background-size:var(--cw) var(--ch);
+}
+
+/* ---------- HOME: one long scroll, act by act ---------- */
+#home{position:fixed;inset:0;overflow:hidden;background:var(--paper);touch-action:manipulation}
+.strip{position:absolute;left:0;top:0;height:100%;display:flex;transition:transform .8s cubic-bezier(.65,0,.35,1)}
+.page{position:relative;flex:none;width:var(--vw,100vw);height:100%;overflow:hidden}
+.pgrid{position:absolute;left:var(--ox);top:0;display:grid;grid-template-columns:repeat(var(--cols),var(--cw));grid-auto-rows:var(--ch)}
+.page.lobby{background-color:var(--wash);background-image:none}
+.page.pink{background-color:var(--pink);background-image:linear-gradient(to right,rgba(255,255,255,.45) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.45) 1px,transparent 1px)}
+.page.lobby.pink{background-image:none}
+.page.just{animation:pinkin .6s ease both}
+@keyframes pinkin{from{background-color:var(--paper)}to{background-color:var(--pink)}}
+.navarrow{position:fixed;z-index:5;border:0;padding:0;margin:0;cursor:pointer;display:grid;place-items:center;font-size:var(--big);line-height:1;color:var(--ink);
+  background-color:var(--paper);background-image:linear-gradient(to right,var(--line) 1px,transparent 1px),linear-gradient(to bottom,var(--line) 1px,transparent 1px);background-size:100% 100%;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.navarrow[hidden]{display:none}
+.navarrow:hover{background-color:var(--wash)}
+.navarrow.locked{color:var(--line);cursor:not-allowed}
+.navarrow.locked:hover{background-color:var(--paper)}
+.hgrid{position:relative;margin-left:var(--ox);width:calc(var(--cw) * var(--cols));display:grid;grid-template-columns:repeat(var(--cols),var(--cw));grid-auto-rows:var(--ch)}
+.snap{grid-column:1;width:1px;scroll-snap-align:start}
+.letter{display:grid;place-items:center;font-size:var(--big);line-height:1;user-select:none;-webkit-user-select:none;z-index:1}
+.band{grid-column:1 / -1;z-index:0;position:relative;overflow:hidden;pointer-events:none}
+.band.lobby{background-color:var(--wash);background-image:linear-gradient(to right,var(--line) 1px,transparent 1px),linear-gradient(to bottom,var(--line) 1px,transparent 1px);background-size:var(--cw) var(--ch);background-position:var(--ox) 0}
+.band .tide{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--pink)}
+.band.pink .tide{height:100%}
+.band.just .tide{animation:fadein .45s ease both}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.band.pink{background-image:linear-gradient(to right,rgba(255,255,255,.45) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.45) 1px,transparent 1px);background-size:var(--cw) var(--ch);background-position:var(--ox) 0}
+.sec-title{display:grid;place-items:center;font-size:var(--big);line-height:1;z-index:1;user-select:none;transition:color .6s ease,opacity .6s ease}
+.sec-sub{z-index:1;display:flex;align-items:center;padding:0 10px;font-size:var(--body);letter-spacing:.22em;text-transform:uppercase;transition:color .6s ease}
+.on-pink{color:#fff}
+.lockcell{z-index:1;display:grid;place-items:center;font-size:var(--mid);opacity:.3}
+
+/* the boxes: one per action. The verb performs itself. */
+.door{border:0;padding:0;margin:0;cursor:pointer;z-index:1;background-size:100% 100%;display:flex;align-items:center;justify-content:center;flex-direction:column;overflow:hidden;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background-color .25s ease}
+.door:hover{background-color:var(--wash)}
+.door .lab{display:flex;font-size:var(--fs,20px);line-height:1;letter-spacing:.02em;pointer-events:none;white-space:pre}
+.door .lab span{display:inline-block}
+.door.done{background-color:var(--pink);color:#fff}
+.door.done:hover{background-color:#c8006d}
+.door.done.on-pink{background-color:#fff;color:var(--pink)}
+.door.done.on-pink:hover{background-color:var(--wash)}
+.door.last::after{content:"";position:absolute;inset:0;border:3px solid var(--ink);pointer-events:none}
+.door.done.last::after{border-color:#fff;inset:5px}
+.door .pic{width:100%;flex:1;min-height:0;display:grid;place-items:center;pointer-events:none}
+.door .pic svg{height:100%;width:auto;max-width:100%}
+.door.tall .lab{padding-bottom:10px}
+.arrow{z-index:2;border:0;background:var(--paper);font-size:var(--big);line-height:1;cursor:pointer;display:grid;place-items:center;color:var(--ink)}
+.arrow.on-pink{background:var(--pink);color:#fff}
+.endbtn{z-index:2;display:flex;align-items:center;justify-content:center}
+.btn{white-space:nowrap;background:var(--paper);border:1px solid currentColor;border-radius:0;padding:.55em .9em;cursor:pointer;letter-spacing:.08em;touch-action:manipulation;color:var(--ink)}
+.btn:active{background:var(--ink);color:var(--paper)}
+
+/* verbs in motion */
+.run .lab span{animation:var(--k) 1.25s ease-in-out both;animation-delay:calc(var(--i) * 70ms)}
+.run .lab.whole span{animation-delay:0s}
+@keyframes k-bounce{0%,100%{transform:none}35%{transform:translateY(-38%)}60%{transform:translateY(6%)}}
+@keyframes k-wave{0%,100%{transform:none}25%{transform:translateY(-28%)}75%{transform:translateY(28%)}}
+@keyframes k-slide{0%,100%{transform:none;opacity:1}45%{transform:translateX(90%);opacity:0}46%{transform:translateX(-90%);opacity:0}}
+@keyframes k-zoom{0%,100%{transform:none}50%{transform:scale(1.6)}}
+@keyframes k-shake{0%,100%{transform:none}10%,50%,90%{transform:translateX(-12%) rotate(-6deg)}30%,70%{transform:translateX(12%) rotate(6deg)}}
+@keyframes k-spin{from{transform:none}to{transform:rotate(360deg)}}
+@keyframes k-flip{from{transform:none}to{transform:rotateX(360deg)}}
+@keyframes k-type{0%{opacity:0}100%{opacity:1}}
+@keyframes k-del{0%,60%{opacity:1}61%,100%{opacity:0}}
+@keyframes k-squash{0%,100%{transform:none}50%{transform:scale(1.3,.45) translateY(55%)}}
+@keyframes k-spread{0%,100%{transform:none}50%{transform:translateX(calc((var(--i) - var(--m)) * 22%))}}
+@keyframes k-hug{0%,100%{transform:none}50%{transform:translateX(calc((var(--m) - var(--i)) * 18%))}}
+@keyframes k-drip{0%,100%{transform:none;opacity:1}50%{transform:translateY(140%);opacity:0}51%{transform:translateY(-60%);opacity:0}}
+@keyframes k-blink{0%,40%,80%{opacity:1}20%,60%{opacity:0}}
+@keyframes k-mirror{0%,100%{transform:none}50%{transform:scaleX(-1)}}
+@keyframes k-rise{0%{transform:translateY(160%);opacity:0}60%,100%{transform:none;opacity:1}}
+@keyframes k-tilt{0%,100%{transform:none}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+@keyframes k-swap{0%,100%{transform:none}50%{transform:translateY(calc(var(--s) * 45%))}}
+@keyframes k-flee{0%,100%{transform:none}30%{transform:translate(calc(var(--s) * 30%),-40%) rotate(calc(var(--s) * 20deg))}}
+@keyframes k-pulse{0%,100%{transform:none}20%,60%{transform:scale(1.35)}40%{transform:scale(1)}}
+@keyframes k-ring{0%,100%{transform:none}10%,30%,50%,70%{transform:rotate(-8deg)}20%,40%,60%,80%{transform:rotate(8deg)}}
+@keyframes k-sweep{0%,100%{transform:none;opacity:1}50%{transform:translateX(120%);opacity:0}51%{transform:translateX(-40%);opacity:0}}
+@keyframes k-bow{0%,100%{transform:none}50%{transform:translateY(30%) rotate(calc(var(--s) * 8deg)) scaleY(.8)}}
+@media (prefers-reduced-motion:reduce){.run .lab span{animation:none}}
+
+/* clumsy drawings: the lines boil */
+.doodle{color:var(--ink);overflow:visible}
+.doodle *{vector-effect:non-scaling-stroke}
+.doodle .ln{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.doodle .fl{fill:currentColor;stroke:none}
+.boil{animation:boil .42s steps(1) infinite}
+@keyframes boil{0%{filter:url(#b0)}33%{filter:url(#b1)}66%{filter:url(#b2)}}
+@keyframes steam{0%{transform:translateY(4px);opacity:0}30%{opacity:1}100%{transform:translateY(-10px);opacity:0}}
+.steam{animation:steam 2s ease-in-out infinite}
+.steam.s2{animation-delay:1s}
+@keyframes armsup{0%,100%{transform:rotate(0)}50%{transform:rotate(var(--r))}}
+@keyframes hop{0%,100%{transform:none}50%{transform:translateY(-8px)}}
+@keyframes popk{0%,60%,100%{transform:none}75%{transform:translate(2px,-14px)}}
+@keyframes poseA{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes poseB{0%,49%{opacity:0}50%,100%{opacity:1}}
+@keyframes shuffle{0%,100%{transform:none}50%{transform:translateX(3px)}}
+@keyframes talk{0%,45%,100%{opacity:1}55%,90%{opacity:.15}}
+
+/* ---------- SCENES ---------- */
+.scene{position:fixed;inset:0;z-index:10;overflow:hidden;outline:none;cursor:pointer}
+.scene.field{background-image:
+    linear-gradient(to right,var(--line) 1px,transparent 1px),
+    linear-gradient(to bottom,var(--line) 1px,transparent 1px),
+    linear-gradient(to bottom right,transparent calc(50% - .5px),var(--line) calc(50% - .5px),var(--line) calc(50% + .5px),transparent calc(50% + .5px)),
+    linear-gradient(to top right,transparent calc(50% - .5px),var(--line) calc(50% - .5px),var(--line) calc(50% + .5px),transparent calc(50% + .5px))}
+.scene[hidden]{display:none}
+.scene.inv{--paper:#e6007e;--ink:#ffffff;--line:rgba(255,255,255,.5);--wash:rgba(255,255,255,.18)}
+.cells{position:absolute;left:var(--ox);top:0;display:grid;grid-template-columns:repeat(var(--cols),var(--cw));grid-auto-rows:var(--ch)}
+.stage{display:grid;grid-template-columns:repeat(8,var(--cw));grid-template-rows:repeat(8,var(--ch));cursor:auto}
+.stage .big{display:grid;place-items:center;font-size:var(--big);line-height:1;user-select:none;-webkit-user-select:none}
+.dir{grid-row:2;grid-column:1 / -1;display:flex;align-items:center;justify-content:center;font-size:var(--body);letter-spacing:.04em;user-select:none;-webkit-user-select:none}
+.play{grid-row:3 / span 6;grid-column:1 / -1;position:relative;min-width:0;min-height:0}
+.play > *{position:absolute}
+.ownmark{position:absolute;border:3px solid var(--ink);pointer-events:none;z-index:8}
+.flood{position:absolute;left:0;right:0;top:0;height:120%;background:var(--pink);z-index:30;pointer-events:none;transform:translateY(100%)}
+.flood svg{position:absolute;left:0;top:calc(var(--ch) * -.3 + 1px);width:200%;height:calc(var(--ch) * .3);animation:waveX 1.8s linear infinite}
+.flood svg path{fill:var(--pink)}
+@keyframes waveX{to{transform:translateX(-50%)}}
+.cue{outline:2px solid transparent;outline-offset:4px;animation:cue 1.4s ease-in-out infinite}
+@keyframes cue{0%,100%{outline-color:transparent}50%{outline-color:var(--ink)}}
+
+/* parts used by the scenes */
+.ink{background:var(--ink)}
+.frame{border:1px solid var(--ink)}
+.dash{border:1px dashed var(--ink)}
+.grab{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.press{cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.tap{cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.glyph{display:grid;place-items:center;color:var(--paper);font-size:var(--mid);line-height:1}
+.cellbox{display:grid;place-items:center;font-size:var(--big);line-height:1}
+.snapback{transition:transform .3s ease}
+.flyoff{transition:transform .5s ease,opacity .5s ease}
+.slowmo{transition:transform .5s ease}
+.feed{overflow-y:auto;overscroll-behavior:contain;border-left:1px solid var(--ink);border-right:1px solid var(--ink);background:var(--paper)}
+.feed .post{height:calc(var(--ch) * 1.2);border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 2fr;gap:8px;padding:10px}
+.feed .post i{background:var(--wash)}
+.feed .post b{display:flex;flex-direction:column;gap:6px}
+.feed .post b u{display:block;height:8px;background:var(--line);text-decoration:none}
+.sq{display:grid;place-items:center}
+.sq::after{content:"";width:34%;aspect-ratio:1;border:1px solid var(--ink)}
+.sq.on{background:var(--ink)}
+.sq.on::after{border-color:var(--paper)}
+.card{background:var(--paper);border:1px solid var(--ink);display:grid;place-items:center;font-size:var(--big)}
+.bit{width:calc(var(--cw) * .22);height:calc(var(--cw) * .22);background:var(--ink)}
+.input-line{font:inherit;color:inherit;background:transparent;border:0;border-bottom:1px solid currentColor;border-radius:0;padding:.35em 0;letter-spacing:.12em;caret-color:var(--ink);font-size:max(16px,var(--body))}
+.caret::after{content:"";position:absolute;left:30%;top:20%;width:2px;height:60%;background:var(--ink);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hide-in{opacity:0;font-size:16px;border:0;padding:0;background:transparent;color:transparent;caret-color:transparent}
+.popup{background:var(--paper);border:1px solid var(--ink);box-shadow:6px 6px 0 var(--wash)}
+.popup .bar{position:absolute;left:0;right:0;top:0;height:calc(var(--ch) * .32);background:var(--ink)}
+.popup .x{position:absolute;right:0;top:0;width:calc(var(--ch) * .32);height:calc(var(--ch) * .32);border:0;background:var(--paper);color:var(--ink);cursor:pointer;font-size:calc(var(--ch) * .24);line-height:1;padding:0;border-left:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.popup .lines{position:absolute;left:12%;right:12%;top:45%;display:flex;flex-direction:column;gap:7px}
+.popup .lines u{display:block;height:7px;background:var(--line);text-decoration:none}
+.spinner{display:grid;place-items:center;font-size:var(--mid);opacity:0}
+.pc{border-left:1px solid var(--line)}
+.pc.on{background:var(--ink)}
+.dots::after{content:"";animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.knock-ripple{border:2px solid var(--ink);pointer-events:none;animation:ripple .6s ease-out forwards}
+@keyframes ripple{from{transform:scale(.6);opacity:1}to{transform:scale(1.5);opacity:0}}
+.door3d{perspective:800px}
+.leaf{position:absolute;inset:0;background:var(--paper);border:1px solid var(--ink);transform-origin:left center;transition:transform .9s cubic-bezier(.3,.7,.3,1)}
+.leaf::after{content:"";position:absolute;right:14%;top:50%;width:10%;aspect-ratio:1;border-radius:50%;background:var(--ink)}
+.sheet{perspective:900px}
+.sheet .half{position:absolute;top:0;bottom:0;width:50%;background:var(--paper);border:1px solid var(--ink);
+  background-image:linear-gradient(to right,var(--line) 1px,transparent 1px),linear-gradient(to bottom,var(--line) 1px,transparent 1px);background-size:var(--cw) var(--ch)}
+.sheet .r{left:50%;transform-origin:left center;transform:rotateY(calc(var(--a,0) * -1deg));transform-style:preserve-3d;backface-visibility:visible}
+.sheet .r.back{background:var(--wash)}
+.flipcard{perspective:700px;cursor:pointer;touch-action:manipulation}
+.flipcard .in{position:absolute;inset:6px;transition:transform .45s ease;transform-style:preserve-3d}
+.flipcard.up .in{transform:rotateY(180deg)}
+.flipcard .f,.flipcard .b{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--ink);display:grid;place-items:center}
+.flipcard .b{background:var(--ink)}
+.flipcard .f{background:var(--paper);transform:rotateY(180deg);font-size:var(--big);line-height:1}
+.flipcard.got .f{background:var(--wash)}
+.glass{border:2px solid var(--ink);border-top:0;overflow:hidden;transform-origin:85% 100%}
+.glass .lq{position:absolute;left:0;right:0;bottom:0;background:var(--ink);transition:height .1s linear}
+.stream{background:var(--ink);opacity:0;transition:opacity .15s ease}
+.dot{width:max(24px,calc(var(--cw) * .3));height:max(24px,calc(var(--cw) * .3));transform:translate(-50%,-50%);border-radius:50%;border:2px solid var(--ink);background:var(--paper);cursor:pointer;touch-action:manipulation;padding:0}
+.dot.hit{background:var(--ink)}
+.dot.next{animation:cue 1s ease-in-out infinite;outline:2px solid transparent;outline-offset:5px}
+.plank{height:4px;background:var(--ink);transform-origin:center}
+.ball{width:calc(var(--cw) * .5);height:calc(var(--cw) * .5);border-radius:50%;background:var(--ink);margin-left:calc(var(--cw) * -.25)}
+.pad{border:1px solid var(--ink);background:var(--paper);cursor:pointer;touch-action:manipulation;transition:background-color .12s ease}
+.pad.lit{background:var(--ink)}
+.ticks{display:flex;gap:4px;justify-content:center;pointer-events:none}
+.ticks i{width:var(--box);height:var(--box);border:1px solid var(--ink)}
+.ticks i.on{background:var(--ink)}
+.curtain{background:repeating-linear-gradient(to right,var(--ink) 0,var(--ink) calc(var(--cw) * .5),#c8006d calc(var(--cw) * .5),#c8006d var(--cw));touch-action:none;cursor:ns-resize}
+.curtain::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:10px;background:radial-gradient(circle at 50% 0,var(--ink) 4px,transparent 5px) 0 0/var(--cw) 10px}
+.hidden-name{position:absolute;opacity:0;pointer-events:none}
+
+.sq{border:0;background:transparent;padding:0}
+.kern{width:calc(var(--cw) * .62);height:calc(var(--cw) * .62);border-radius:50%;border:2px solid var(--ink);background:var(--paper);cursor:pointer;padding:0;touch-action:manipulation}
+.label{display:grid;place-items:center;font-size:var(--mid);line-height:1;user-select:none;-webkit-user-select:none;pointer-events:none}
+.ring{animation:k-ring .9s ease-in-out infinite}
+.fill-up{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--ink)}
+.bigbtn{border:1px solid var(--ink);background:var(--paper);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;font-size:var(--body);letter-spacing:.12em;overflow:hidden}
+.bigbtn span{position:relative;z-index:1}
+.fig svg,.pic2 svg{width:100%;height:100%}
+.namecell{display:grid;place-items:center;font-size:var(--big);line-height:1}
+
+/* ---------- INTERMISSION: drawn, not gridded ---------- */
+.band.lobby{background-color:var(--wash);background-image:none;margin:0 calc(var(--ox) * -1)}
+.band.lobby.pink{background-image:none}
+.toon-title{z-index:1;display:flex;flex-direction:column;justify-content:center;font-size:var(--big);line-height:1;color:transparent;-webkit-text-stroke:2px var(--ink);
+  user-select:none;pointer-events:none;animation:boil .42s steps(1) infinite;padding-left:6px;letter-spacing:.06em}
+.toon-title .tl{display:flex}
+.toon-title.on-pink{-webkit-text-stroke-color:#fff}
+.toon-title.faint{opacity:.28}
+.jig{display:inline-block;transform:rotate(var(--r,0deg));animation:jig 1.3s steps(2) infinite;animation-delay:var(--d,0ms)}
+@keyframes jig{0%{transform:rotate(var(--r,0deg)) translateY(0)}50%{transform:rotate(calc(var(--r,0deg) * -1)) translateY(-5%)}}
+.lobbyarea{z-index:1;position:relative;min-width:0;min-height:0}
+.toon-door{position:absolute;border:0;background:transparent;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;color:var(--ink);
+  transform:rotate(var(--t,0deg));transition:transform .25s ease;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.toon-door:hover,.toon-door:focus-visible{transform:rotate(calc(var(--t,0deg) * -1)) scale(1.06)}
+.toon-door .pic{flex:1;min-height:0;width:100%;display:grid;place-items:center;position:relative;z-index:1;pointer-events:none}
+.toon-door .pic svg{position:absolute;inset:0;width:100%;height:100%}
+.toon-door .doodle{color:inherit}
+.toon-door .lab{position:relative;z-index:1;font-size:var(--fs);line-height:1.1;padding:8px 0 2px;flex:none;animation:boil .42s steps(1) infinite;pointer-events:none;display:flex}
+.toon-door .lab span{display:inline-block}
+.toon-door .blob{position:absolute;top:0;left:8%;right:8%;bottom:calc(var(--fs) * 1.5 + 8px);border-radius:58% 42% 55% 45% / 48% 60% 40% 52%;background:var(--pink);opacity:0;transform:scale(.6);transition:opacity .3s ease,transform .3s ease;animation:boil .42s steps(1) infinite;pointer-events:none}
+.toon-door.done .blob{opacity:1;transform:none}
+.toon-door.done{color:#fff}
+.toon-door.on-pink{color:#fff}
+.toon-door.done.on-pink{color:var(--pink)}
+.toon-door.done.on-pink .blob{background:#fff}
+.arrow.toon{background:transparent;animation:boil .42s steps(1) infinite}
+
+.scene.toon{background-color:var(--wash);background-image:none;cursor:auto}
+.scene.toon .open{background-color:transparent;background-image:none}
+.scene.toon .stage .big{color:transparent;-webkit-text-stroke:2px var(--ink);animation:boil .42s steps(1) infinite,jig 1.3s steps(2) infinite;animation-delay:0ms,var(--d,0ms);transform:rotate(var(--r,0deg))}
+.scene.toon .dir,.scene.toon .frame,.scene.toon .ticks,.scene.toon .ink.grab,.scene.toon .floorline,.scene.toon .label{animation:boil .42s steps(1) infinite}
+.scene.toon .frame{border-width:2px;border-radius:12px 16px 9px 18px / 14px 10px 18px 12px}
+.scene.toon .ticks i{border-radius:50%;border-width:2px}
+.scene.toon .ink.grab{border-radius:48% 52% 46% 54%}
+.floorline{border:2px solid var(--ink);border-radius:40px;transition:background-color .08s ease}
+.toon-close{position:absolute;top:12px;right:14px;width:max(40px,calc(var(--cw) * .7));height:max(40px,calc(var(--cw) * .7));border:0;background:transparent;padding:0;cursor:pointer;z-index:20;color:var(--ink)}
+.toon-close svg{width:100%;height:100%}
+.toon-close .ln{stroke-width:3}
+
+.toon-door .lab{color:var(--ink)}
+.toon-door.on-pink .lab{color:#fff}
+
+/* a cell that holds a letter is never struck: a blank box with only the letter in it */
+.letter,.sec-title{background-color:var(--paper);background-image:linear-gradient(to right,var(--line) 1px,transparent 1px),linear-gradient(to bottom,var(--line) 1px,transparent 1px);background-size:100% 100%}
+.sec-title.on-pink{background:transparent}
+.sec-title.faint{color:var(--line);opacity:1}
+
+.navarrow.beckon{outline:2px solid transparent;outline-offset:4px;animation:cue 1.2s ease-in-out infinite}
+
+.navarrow.toon{background:transparent;animation:boil .42s steps(1) infinite}
+.navarrow.toon.beckon{animation:boil .42s steps(1) infinite,cue 1.2s ease-in-out infinite}
+.navarrow.toon:hover{background:transparent;transform:scale(1.1)}
+
+/* ---------- grid parts: everything sits in whole cells ---------- */
+.ico{width:60%;height:60%;overflow:visible;color:inherit}
+.ico .ln{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.ico .fl{fill:currentColor}
+.cell-c{display:grid;place-items:center}
+.on-ink{color:var(--paper)}
+.c-ink{background:var(--ink)}
+.c-wash{background:var(--wash)}
+.c-frame{border:1px solid var(--ink)}
+.c-dash{border:1px dashed var(--ink)}
+.faint-dash{border-color:var(--line)}
+.mcell{border:1px solid var(--ink);background:var(--paper)}
+.mcell.on{background:var(--ink)}
+.mcell.low{background:var(--wash)}
+.mcell.on.low{background:var(--ink)}
+.flash{pointer-events:none}
+.rowbar{background:linear-gradient(var(--wash),var(--wash)) 10px 50% / calc(100% - 20px) 34% no-repeat}
+.bitcell{display:grid;place-items:center;pointer-events:none}
+.bitcell::after{content:"";width:30%;aspect-ratio:1;background:var(--ink)}
+.bitcell.out{visibility:hidden}
+.fogcell{background:#efe9ec;transition:opacity .15s steps(1, end)}
+.fogcell.gone{opacity:0}
+.peelcell{transition:none}
+.peelcell.off{background:transparent;border:1px dashed var(--ink)}
+.peelcell.corner{background:linear-gradient(135deg,var(--ink) 62%,var(--wash) 62%)}
+.leaf{border:1px solid var(--ink);background:var(--paper);transform-origin:left center;transition:transform .5s steps(4, end)}
+.leaf::after{content:"";position:absolute;right:20%;top:50%;width:12%;aspect-ratio:1;border-radius:50%;background:var(--ink)}
+.leaf.opened{transform:scaleX(.12)}
+.glassbox{border:2px solid var(--ink);border-top:0}
+.dotcell{border:0;background:transparent;display:grid;place-items:center;padding:0;cursor:pointer;touch-action:manipulation}
+.dotcell::after{content:"";width:34%;aspect-ratio:1;border-radius:50%;border:2px solid var(--ink);background:var(--paper)}
+.dotcell.hit::after{background:var(--ink)}
+.dotcell.next{animation:cue 1s ease-in-out infinite;outline:2px solid transparent;outline-offset:-4px}
+.paint.on{background:var(--ink)}
+.headcell{display:grid;place-items:center}
+.headcell::after{content:"";width:70%;aspect-ratio:1;border-radius:50%;background:var(--ink)}
+.c-ink.glow{outline:3px solid var(--wash);outline-offset:-6px}
+.popup{background:var(--paper);border:1px solid var(--ink);box-shadow:none}
+.popup .xbtn{background:var(--paper);color:var(--ink);padding:0}
+.card{background:var(--paper);border:1px solid var(--ink);color:var(--ink)}
+.sheet{perspective:none}
+.flipcard{perspective:none}
+.flipcard .f{font-size:inherit;color:var(--ink)}
+.flipcard .in{inset:8px}
+.bigbtn{display:grid;place-items:center}
+.bigbtn span{position:relative;z-index:1}
+.curtain::after{display:none}
+.feed{scroll-snap-type:y mandatory}
+.feed .post{height:var(--ch);scroll-snap-align:start;grid-template-columns:var(--cw) 1fr;padding:0;gap:0}
+.feed .post i{margin:10px;background:var(--wash)}
+.feed .post b{justify-content:center;padding-right:12px}
+
+.navarrow{overflow:hidden}
+.navarrow .ico{width:56%;height:56%}
+</style>
+</head>
+<body>
+<!-- the wobble for the hand-drawn lines -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="b0"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="1"/><feDisplacementMap in="SourceGraphic" scale="3"/></filter>
+  <filter id="b1"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3"/></filter>
+  <filter id="b2"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="13"/><feDisplacementMap in="SourceGraphic" scale="3"/></filter>
+</svg>
+
+<!-- HOME: one page per section, side by side. Only the arrows move between them. -->
+<main id="home" aria-label="02 Verbing">
+  <div class="strip" id="strip"></div>
+</main>
+<button class="navarrow" id="navPrev" type="button" aria-label="Previous section"></button>
+<button class="navarrow" id="navNext" type="button" aria-label="Next section"></button>
+
+<script>
+(() => {
+/* ================= THE SCRIPT ================= */
+const A = (v, p, k, s) => ({ v, p, k, s: !!s });   // verb, past tense, motion, whole-word motion
+const ACTS = [
+  { id: 'I', title: ['ACT I'], sub: 'given actions', h: 1, verbs: [
+    A('UNLOCK','UNLOCKED','k-slide',1), A('SCROLL','SCROLLED','k-wave'), A('TAP','TAPPED','k-bounce'), A('SWIPE','SWIPED','k-slide',1),
+    A('LIKE','LIKED','k-pulse',1), A('ZOOM','ZOOMED','k-zoom',1), A('DRAG','DRAGGED','k-sweep'), A('HOLD','HELD','k-squash'),
+    A('TYPE','TYPED','k-type'), A('DELETE','DELETED','k-del'), A('SELECT','SELECTED','k-blink'), A('COPY','COPIED','k-spread'),
+    A('REFRESH','REFRESHED','k-spin'), A('WAIT','WAITED','k-blink',1), A('SEARCH','SEARCHED','k-zoom'), A('CLOSE','CLOSED','k-hug') ] },
+  { id: 'II', title: ['ACT II'], sub: 'rewritten actions', h: 1, verbs: [
+    A('WIPE','WIPED','k-sweep'), A('PEEL','PEELED','k-tilt',1), A('FOLD','FOLDED','k-mirror',1), A('KNOCK','KNOCKED','k-ring',1),
+    A('SHAKE','SHOOK','k-shake'), A('CATCH','CAUGHT','k-flee'), A('STACK','STACKED','k-rise'), A('STIR','STIRRED','k-spin'),
+    A('SWEEP','SWEPT','k-sweep'), A('ROTATE','ROTATED','k-spin',1), A('FLIP','FLIPPED','k-flip'), A('POUR','POURED','k-drip'),
+    A('CONNECT','CONNECTED','k-hug'), A('BALANCE','BALANCED','k-tilt',1) ] },
+  { id: 'INT', title: ['INTER', 'MISSION'], sub: '', h: 2, lobby: true, verbs: [
+    A('STRETCH','STRETCHED','k-spread'), A('SIP','SIPPED','k-drip'), A('SNACK','SNACKED','k-bounce'),
+    A('CHAT','CHATTED','k-swap'), A('DANCE','DANCED','k-wave'), A('QUEUE','QUEUED','k-slide') ] },
+  { id: 'III', title: ['ACT III'], sub: 'shared actions', h: 1, verbs: [
+    A('PASS','PASSED','k-slide',1), A('SWAP','SWAPPED','k-swap'), A('JOIN','JOINED','k-hug'), A('WAVE','WAVED','k-wave'),
+    A('FOLLOW','FOLLOWED','k-wave'), A('MIRROR','MIRRORED','k-mirror',1), A('ECHO','ECHOED','k-blink'), A('HUG','HUGGED','k-hug'),
+    A('ANSWER','ANSWERED','k-ring',1), A('INVITE','INVITED','k-slide',1) ] },
+  { id: 'CC', title: ['CURTAIN', 'CALL'], sub: '', h: 1, verbs: [
+    A('APPLAUD','APPLAUDED','k-pulse'), A('BOW','BOWED','k-bow'), A('SIGN','SIGNED','k-type'), A('LOWER','LOWERED','k-drip',1) ] },
+];
+const ALL = []; ACTS.forEach((a, ai) => a.verbs.forEach(x => { x.act = ai; x.n = ALL.length + 1; ALL.push(x); }));
+const N = ALL.length;
+const BYV = Object.fromEntries(ALL.map(x => [x.v, x]));
+
+const $ = id => document.getElementById(id);
+const root = document.documentElement;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const finePointer = matchMedia('(hover: hover)').matches;
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ss = { get(k, d) { try { const v = sessionStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+             set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const done = new Set(ss.get('verbing-done', []));
+const OPEN_ALL = /[?&#]open\b/.test(location.search + location.hash);
+let lastInput = performance.now();
+['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'].forEach(t => addEventListener(t, () => { lastInput = performance.now(); }, { passive: true, capture: true }));
+
+/* ================= DRAWINGS (clumsy, boiling lines) ================= */
+let uid = 0;
+const svgEl = (inner, vb = '0 0 100 100') => `<svg class="doodle boil" viewBox="${vb}" aria-hidden="true">${inner}</svg>`;
+const D = {
+  STRETCH: () => svgEl(`<circle class="ln" cx="50" cy="22" r="9"/><path class="ln" d="M50 31 L50 63 M50 63 L40 90 M50 63 L61 90"/>
+    <path class="ln arm" data-side="-1" d="M50 39 L31 55"/><path class="ln arm" data-side="1" d="M50 39 L69 55"/>`),
+  SIP: () => { const id = 'cup' + (uid++); return svgEl(`<defs><clipPath id="${id}"><path d="M27 40 L34 87 Q35 91 40 91 L60 91 Q65 91 66 87 L73 40 Z"/></clipPath></defs>
+    <rect class="fl lq" x="20" y="46" width="60" height="50" clip-path="url(#${id})" style="transition:transform .4s ease;transform-box:fill-box"/>
+    <path class="ln" d="M27 40 L34 87 Q35 91 40 91 L60 91 Q65 91 66 87 L73 40 Z"/><path class="ln" d="M71 51 Q87 50 85 63 Q83 74 68 71"/>
+    <path class="ln steam" d="M42 33 Q37 25 43 19 Q49 13 45 5"/><path class="ln steam s2" d="M57 33 Q52 25 58 19 Q64 13 60 5"/>`); },
+  SNACK: () => svgEl(`<path class="ln" d="M29 42 L36 92 L64 92 L71 42 Z"/><path class="ln" d="M41 42 L44 92 M50 42 L50 92 M59 42 L56 92"/>
+    <g class="pile"><circle class="ln" cx="39" cy="36" r="6"/><circle class="ln" cx="51" cy="31" r="7" style="animation:popk 1.6s ease-in-out infinite"/><circle class="ln" cx="62" cy="36" r="6" style="animation:popk 1.6s .8s ease-in-out infinite"/></g>`),
+  CHAT: () => svgEl(`<circle class="ln" cx="24" cy="66" r="9"/><path class="ln" d="M12 94 Q24 76 36 94"/>
+    <circle class="ln" cx="76" cy="66" r="9"/><path class="ln" d="M64 94 Q76 76 88 94"/>
+    <g class="bL" style="animation:talk 2.4s ease-in-out infinite"><path class="ln" d="M8 16 H46 V42 H30 L22 51 L24 42 H8 Z"/><path class="ln" d="M14 25 Q20 21 26 25 T38 25 M14 33 Q20 29 26 33"/></g>
+    <g class="bR" style="animation:talk 2.4s 1.2s ease-in-out infinite"><path class="ln" d="M54 16 H92 V42 H76 L78 51 L70 42 H54 Z"/><path class="ln" d="M60 25 Q66 21 72 25 T84 25 M60 33 Q66 29 72 33"/></g>`),
+  DANCE: () => svgEl(`<g style="animation:hop .6s ease-in-out infinite">
+    <g style="animation:poseA 1.2s steps(1) infinite"><circle class="ln" cx="50" cy="20" r="8"/><path class="ln" d="M50 28 L50 60 M50 36 L32 22 M50 36 L68 22 M50 60 L38 86 M50 60 L64 84"/></g>
+    <g style="animation:poseB 1.2s steps(1) infinite"><circle class="ln" cx="52" cy="20" r="8"/><path class="ln" d="M51 28 L49 60 M50 36 L30 44 M50 36 L70 30 M49 60 L42 88 M49 60 L70 70"/></g></g>
+    <path class="ln" d="M20 94 H80"/>`),
+  QUEUE: () => svgEl(`<rect class="ln" x="78" y="30" width="17" height="62"/><text x="86.5" y="24" font-size="10" text-anchor="middle" fill="currentColor" font-family="Courier New, monospace">WC</text>
+    <g style="animation:shuffle 1.4s ease-in-out infinite">${[12, 30, 48, 64].map((x, i) => `<g><circle class="ln${i === 0 ? '' : ''}" cx="${x}" cy="57" r="5"/><path class="ln" d="M${x} 62 L${x} 80 M${x} 80 L${x - 5} 92 M${x} 80 L${x + 5} 92 M${x} 67 L${x - 6} 75 M${x} 67 L${x + 6} 75"/></g>`).join('')}</g>
+    <path class="ln" d="M4 94 H96"/>`),
+  HAND: () => svgEl(`<path class="ln" d="M38 92 L38 54 Q38 44 46 44 L46 22 Q46 15 51 15 Q56 15 56 22 L56 40 Q57 33 62 33 Q67 33 67 40 L67 70 Q67 92 52 92 Z"/>
+    <path class="ln" d="M38 62 Q27 52 22 58 Q19 64 38 76"/><path class="ln" d="M56 40 L56 56 M46 44 L46 56"/>`),
+  PHONE: () => svgEl(`<rect class="ln" x="32" y="12" width="36" height="76" rx="5"/><path class="ln" d="M44 20 H56 M46 80 H54"/>
+    <path class="ln ringa" d="M22 34 Q14 50 22 66 M78 34 Q86 50 78 66"/><path class="ln ringb" d="M14 26 Q2 50 14 74 M86 26 Q98 50 86 74"/>`),
+};
+
+/* ================= GRID ================= */
+let G = null;
+function measure() {
+  const vw = innerWidth, vh = innerHeight;
+  const ch = Math.min(vh / 8, vw / 8 * 11 / 8.5, 112), cw = ch * 8.5 / 11;
+  const cols = Math.max(8, Math.floor(vw / cw + 1e-6)), vrows = Math.max(8, Math.floor(vh / ch + 1e-6));
+  return { vw, vh, cw, ch, cols, vrows, ox: (vw - cols * cw) / 2, sc0: Math.floor((cols - 8) / 2), sr0: Math.floor((vrows - 8) / 2) };
+}
+function applyGrid(g) {
+  const s = root.style;
+  s.setProperty('--cw', g.cw + 'px'); s.setProperty('--ch', g.ch + 'px'); s.setProperty('--ox', g.ox + 'px'); s.setProperty('--cols', g.cols); s.setProperty('--vw', g.vw + 'px');
+}
+
+/* ================= HOME: one page per section, side by side, moved only with the arrows ================= */
+const home = $('home'), strip = $('strip');
+const actDone = i => ACTS[i].verbs.every(x => done.has(x.n));
+/* for the demonstration: five finished actions in a section open the next one.
+   (Set NEED to Infinity to ask for every action.) A section still turns pink only when all of it is done. */
+const NEED = 5;
+const actPassed = i => ACTS[i].verbs.filter(x => done.has(x.n)).length >= Math.min(NEED, ACTS[i].verbs.length);
+const unlocked = i => OPEN_ALL || i === 0 || actPassed(i - 1);
+const PAGES = ACTS.length + 1;                 /* five sections, then THE END */
+const pageOpen = p => p < ACTS.length ? unlocked(p) : (OPEN_ALL || actPassed(ACTS.length - 1));
+let doorEls = [], justFlooded = -1, lastDoor = 0, page = ss.get('verbing-page', 0), nextCue = false;
+let pg = null;                                 /* the grid of the page being built */
+
+function place(el, r, c, rs = 1, cs = 1) { el.style.gridArea = `${r + 1} / ${c + 1} / span ${rs} / span ${cs}`; pg.appendChild(el); return el; }
+function letters(text, r, c, cls) {
+  [...text].forEach((ch, i) => { if (ch === ' ') return; const d = document.createElement('div'); d.className = cls; d.textContent = ch; d.setAttribute('aria-hidden', 'true'); place(d, r, c + i); });
+}
+function labelHTML(word, k, whole) {
+  const m = (word.length - 1) / 2;
+  return `<span class="lab${whole ? ' whole' : ''}" style="--k:${k}">` + [...word].map((ch, i) => `<span style="--i:${i};--m:${m};--s:${i % 2 ? 1 : -1}">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('') + '</span>';
+}
+function newPage(cls) {
+  const p = document.createElement('section'); p.className = 'page field ' + (cls || '');
+  const g = document.createElement('div'); g.className = 'pgrid'; p.appendChild(g); strip.appendChild(p); pg = g; return p;
+}
+function buildHome() {
+  const g = G, S0 = g.sc0, off = Math.max(0, Math.floor((g.vrows - 8) / 2));
+  strip.textContent = ''; doorEls = [];
+  strip.style.width = (PAGES * g.vw) + 'px';
+  ACTS.forEach((act, ai) => {
+    const complete = actDone(ai), open = unlocked(ai);
+    const p = newPage((act.lobby ? 'lobby' : '') + (complete ? ' pink' : '') + (ai === justFlooded ? ' just' : ''));
+    p.setAttribute('aria-label', act.title.join(' ').toLowerCase());
+    /* every page keeps the same rhythm: title, an empty row, then the boxes from the fifth row */
+    let r = act.title.length > 1 ? off + 1 : off + 2;
+    if (ai === 0) {                                  /* the title, top-left, on the first page only */
+      if (g.cols >= 10) { letters('02', off, 0, 'letter'); letters('VERBING', off, 3, 'letter'); }
+      else { letters('02VERB', off, 0, 'letter'); letters('ING', off + 1, 0, 'letter'); r = off + 3; }
+    }
+    if (act.lobby) { buildLobby(act, ai, r, open, complete); return; }
+    act.title.forEach(line => { letters(line, r, S0, 'sec-title' + (complete ? ' on-pink' : '')); r++; });
+    r = Math.max(r + 1, off + 4);
+    if (!open) return;
+    act.verbs.forEach((x, i) => {
+      const rr = r + Math.floor(i / 4), cc = S0 + (i % 4) * 2;
+      const b = document.createElement('button'); b.type = 'button';
+      const isDone = done.has(x.n), word = isDone ? x.p : x.v;
+      b.className = 'open door' + (isDone ? ' done' : '') + (complete ? ' on-pink' : '') + (x.n === lastDoor ? ' last' : '');
+      const fs = Math.min(g.ch * .3, (2 * g.cw - 18) / (Math.max(word.length, 4) * .62));
+      b.style.setProperty('--fs', fs.toFixed(1) + 'px');
+      b.innerHTML = labelHTML(word, x.k, x.s);
+      b.setAttribute('aria-label', `${x.v.toLowerCase()}${isDone ? ', done' : ''}`);
+      b.addEventListener('click', () => go(x.n));
+      b.addEventListener('pointerenter', () => runLabel(b));
+      b.addEventListener('focus', () => runLabel(b));
+      place(b, rr, cc, 1, 2); doorEls[x.n] = b;
+    });
+  });
+  /* the end */
+  const finished = pageOpen(PAGES - 1);
+  newPage('endpage').setAttribute('aria-label', 'the end');
+  letters('THE END', off + 3, S0, 'sec-title' + (finished ? '' : ' faint'));
+  if (finished) {
+    const wrap = document.createElement('div'); wrap.className = 'endbtn';
+    wrap.innerHTML = '<button class="btn" type="button">AGAIN</button>';
+    wrap.firstChild.addEventListener('click', () => { done.clear(); ss.set('verbing-done', []); lastDoor = 0; buildHome(); turnTo(0); });
+    place(wrap, off + 5, S0 + 2, 1, 4);
+  }
+  justFlooded = -1;
+  page = clamp(page, 0, PAGES - 1); while (page > 0 && !pageOpen(page)) page--;
+  turnTo(page, true);
+}
+/* the intermission is drawn, not gridded: a hand-drawn title and loose doodles, all wobbling */
+const LOBBY = [[1, 2, -3], [35, 0, 2.5], [69, 6, -2], [3, 52, 2], [37, 50, -2.5], [69, 54, 3]];
+const jigLetters = text => [...text].map((ch, i) => `<span class="jig" style="--r:${((i * 37) % 9 - 4) * .9}deg;--d:${-(i * 173 % 1300)}ms">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('');
+function buildLobby(act, ai, r, open, pinkNow) {
+  const S0 = G.sc0;
+  const tt = document.createElement('div'); tt.className = 'toon-title' + (pinkNow ? ' on-pink' : '');
+  tt.innerHTML = act.title.map(line => `<div class="tl">${jigLetters(line)}</div>`).join('');
+  place(tt, r, S0, act.title.length, 8);
+  r = Math.max(r + act.title.length + 1, Math.max(0, Math.floor((G.vrows - 8) / 2)) + 4);
+  if (!open) return;
+  const area = document.createElement('div'); area.className = 'lobbyarea'; place(area, r, S0, 4, 8);
+  act.verbs.forEach((x, i) => {
+    const isDone = done.has(x.n), word = isDone ? x.p : x.v, [lx, ly, t] = LOBBY[i];
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = 'toon-door' + (isDone ? ' done' : '') + (pinkNow ? ' on-pink' : '');
+    Object.assign(b.style, { left: lx + '%', top: ly + '%', width: '30%', height: '46%' }); b.style.setProperty('--t', t + 'deg');
+    const fs = Math.min(G.ch * .24, (8 * G.cw * .3 - 10) / (Math.max(word.length, 4) * .62));
+    b.style.setProperty('--fs', fs.toFixed(1) + 'px');
+    b.innerHTML = `<span class="blob"></span><span class="pic">${D[x.v]()}</span>` + labelHTML(word, x.k, x.s);
+    b.setAttribute('aria-label', `${x.v.toLowerCase()}${isDone ? ', done' : ''}`);
+    b.addEventListener('click', () => go(x.n));
+    b.addEventListener('pointerenter', () => runLabel(b));
+    area.appendChild(b); doorEls[x.n] = b;
+  });
+}
+
+/* the two arrows: the only way to move between sections */
+const navPrev = $('navPrev'), navNext = $('navNext');
+function placeArrows() {
+  const g = G, off = Math.max(0, Math.floor((g.vrows - 8) / 2));
+  let row, cp, cn;
+  if (g.sc0 >= 2) { row = off + 4; cp = g.sc0 - 2; cn = g.sc0 + 9; }
+  else { row = g.vrows - 1; cp = 0; cn = g.cols - 1; }
+  [[navPrev, cp], [navNext, cn]].forEach(([a, c]) => Object.assign(a.style, { left: (g.ox + c * g.cw) + 'px', top: (row * g.ch) + 'px', width: g.cw + 'px', height: g.ch + 'px' }));
+}
+function updateArrows() {
+  navPrev.hidden = page === 0;
+  const nxt = page + 1;
+  navNext.hidden = nxt >= PAGES;
+  const can = nxt < PAGES && pageOpen(nxt);
+  navNext.classList.toggle('locked', !can); navNext.disabled = !can;
+  navNext.setAttribute('aria-label', can ? 'Next section' : 'Next section (finish five actions here first)');
+  navNext.classList.toggle('beckon', can && nextCue);
+}
+function turnTo(p, instant) {
+  if (p < 0 || p >= PAGES || !pageOpen(p)) { if (p > page) nudgeArrow(); return; }
+  if (p !== page) nextCue = false;
+  page = p; ss.set('verbing-page', page);
+  strip.style.transition = instant || reduced ? 'none' : '';
+  strip.style.transform = `translateX(${-page * G.vw}px)`;
+  if (instant) { void strip.offsetWidth; strip.style.transition = ''; }
+  [...strip.children].forEach((el, i) => { el.inert = i !== page; el.setAttribute('aria-hidden', i !== page); });
+  const drawn = page < ACTS.length && ACTS[page].lobby;          /* the intermission has no grid: the arrows are drawn too */
+  [navPrev, navNext].forEach(a => a.classList.toggle('toon', !!drawn));
+  updateArrows();
+}
+function nudgeArrow() { navNext.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 260 }); }
+navPrev.addEventListener('click', () => turnTo(page - 1));
+navNext.addEventListener('click', () => turnTo(page + 1));
+/* no swiping or scrolling the home page: only the arrows (and the arrow keys) move it */
+home.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+home.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+/* the verbs perform themselves: on hover, and now and then on their own */
+function runLabel(b) { if (!b || b.classList.contains('run') || b.classList.contains('done')) return; b.classList.add('run'); setTimeout(() => b.classList.remove('run'), 1250 + 70 * 10); }
+setInterval(() => {
+  if (open) return;
+  const pageEl = strip.children[page]; if (!pageEl) return;
+  const vis = [...pageEl.querySelectorAll('.door:not(.done), .toon-door:not(.done)')];
+  if (vis.length) runLabel(pick(vis));
+}, 1500);
+
+/* ================= SCENES ================= */
+const scenes = {};
+let open = 0, anim = null, exiting = null, autoClose = 0;
+const go = n => { location.hash = n ? 'sc-' + n : 'home'; };
+
+function makeScene(x) {
+  const sec = document.createElement('section');
+  sec.className = 'field scene'; sec.id = 'sc-' + x.n; sec.tabIndex = -1; sec.hidden = true; sec.setAttribute('aria-label', x.v.toLowerCase());
+  sec.innerHTML = `<div class="cells"><div class="open stage"></div></div>
+    <div class="flood"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path d="M0 12 Q12.5 0 25 12 T50 12 T75 12 T100 12 T125 12 T150 12 T175 12 T200 12 V20 H0Z"/></svg></div>`;
+  document.body.appendChild(sec);
+  const stage = sec.querySelector('.stage');
+  const word = x.v, c0 = Math.floor((8 - word.length) / 2) + 1;
+  [...word].forEach((ch, i) => { const d = document.createElement('div'); d.className = 'big'; d.textContent = ch; d.style.gridArea = `1 / ${c0 + i}`; stage.appendChild(d); });
+  const dir = document.createElement('div'); dir.className = 'dir'; stage.appendChild(dir);
+  const play = document.createElement('div'); play.className = 'play'; stage.appendChild(play);
+  sec.addEventListener('click', e => { if (e.target === sec || e.target.classList.contains('cells')) go(0); });
+  if (ACTS[x.act].lobby) {
+    sec.classList.add('toon');
+    stage.querySelectorAll('.big').forEach((d, i) => { d.style.setProperty('--r', ((i * 37) % 9 - 4) * .9 + 'deg'); d.style.setProperty('--d', -(i * 173 % 1300) + 'ms'); });
+    const cl = document.createElement('button'); cl.type = 'button'; cl.className = 'toon-close'; cl.setAttribute('aria-label', 'Close');
+    cl.innerHTML = svgEl('<path class="ln" d="M22 20 Q50 52 80 82 M78 18 Q52 50 20 80"/>');
+    cl.addEventListener('click', () => go(0)); sec.appendChild(cl);
+  }
+  const hooks = { enter: [], leave: [], frame: [], resize: [], key: [] };
+  const api = {
+    x, sec, stage, play,
+    dir(t) { dir.textContent = t; },
+    done() { if (done.has(x.n)) return; complete(x.n); },
+    get isDone() { return done.has(x.n); },
+    on(k, f) { hooks[k].push(f); },
+    every(ms, f) { let id = 0; hooks.enter.push(() => { clearInterval(id); id = setInterval(f, ms); }); hooks.leave.push(() => clearInterval(id)); },
+    frame(f) { hooks.frame.push(f); },
+    key(f) { hooks.key.push(f); },
+  };
+  const s = { sec, api, hooks };
+  try { BUILD[x.v](api); } catch (e) { console.error(x.v, e); }
+  return s;
+}
+function positionStage(s) {
+  const st = s.sec.querySelector('.stage');
+  st.style.gridArea = `${G.sr0 + 1} / ${G.sc0 + 1} / span 8 / span 8`;
+  s.sec.querySelector('.cells').style.gridTemplateRows = `repeat(${G.vrows + 1}, var(--ch))`;
+}
+function clipFrom(rect, el) {
+  const s = el.getBoundingClientRect();
+  return `inset(${Math.max(0, rect.top - s.top)}px ${Math.max(0, s.right - rect.right)}px ${Math.max(0, s.bottom - rect.bottom)}px ${Math.max(0, rect.left - s.left)}px)`;
+}
+function show(n, animate) {
+  if (n === open) return;
+  const from = open;
+  if (n && !unlocked(ALL[n - 1].act)) { history.replaceState(null, '', '#home'); return; }
+  if (anim) { anim.cancel(); anim = null; }
+  if (exiting) { exiting.hidden = true; exiting = null; }
+  clearTimeout(autoClose);
+  if (from) { const s = scenes[from]; s.hooks.leave.forEach(f => f()); }
+  open = n;
+  if (n) {
+    const s = scenes[n] || (scenes[n] = makeScene(ALL[n - 1]));
+    positionStage(s);
+    const door = doorEls[n], rect = door ? door.getBoundingClientRect() : null;
+    s.sec.hidden = false;
+    if (from) scenes[from].sec.hidden = true;
+    else if (animate && !reduced && rect) {
+      anim = s.sec.animate([{ clipPath: clipFrom(rect, s.sec) }, { clipPath: 'inset(0px 0px 0px 0px)' }], { duration: 420, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      anim.onfinish = () => { anim = null; };
+    }
+    s.sec.focus({ preventScroll: true });
+    s.hooks.enter.forEach(f => f());
+  } else if (from) {
+    const s = scenes[from]; lastDoor = from;
+    buildHome();
+    const door = doorEls[from];
+    if (animate && !reduced) {
+      exiting = s.sec;
+      anim = s.sec.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 450, easing: 'ease-out' });
+      anim.onfinish = () => { if (exiting === s.sec) { s.sec.hidden = true; exiting = null; } anim = null; };
+    } else s.sec.hidden = true;
+    if (door) door.focus({ preventScroll: true });
+  }
+}
+function route(animate) {
+  const m = /^#sc-(\d+)$/.exec(location.hash);
+  show(m ? clamp(+m[1], 1, N) : 0, animate);
+}
+addEventListener('hashchange', () => route(true));
+addEventListener('keydown', e => {
+  if (e.key === 'Escape' && open) { if (e.target.tagName === 'INPUT') e.target.blur(); go(0); return; }
+  if (!open && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); turnTo(page + (e.key === 'ArrowRight' ? 1 : -1)); return; }
+  if (open && scenes[open] && e.target.tagName !== 'INPUT') scenes[open].hooks.key.forEach(f => f(e));
+});
+
+/* an action is done: a pink wave floods the page, then it folds back into its box */
+function complete(n) {
+  const nextWas = pageOpen(page + 1);
+  done.add(n); ss.set('verbing-done', [...done]);
+  if (!nextWas && page + 1 < PAGES && pageOpen(page + 1)) nextCue = true;   /* the → arrow will pulse */
+  const s = scenes[n], fl = s.sec.querySelector('.flood');
+  if (actDone(ALL[n - 1].act)) justFlooded = ALL[n - 1].act;
+  /* a breath first: the finished action stays on screen for a moment */
+  setTimeout(() => {
+    if (open !== n) return;
+    const a = fl.animate([{ transform: 'translateY(100%)' }, { transform: 'translateY(0%)' }], { duration: reduced ? 1 : 1500, easing: 'cubic-bezier(.45,.05,.35,1)', fill: 'forwards' });
+    a.onfinish = () => {
+      setTimeout(() => { if (open === n) go(0); setTimeout(() => a.cancel(), 700); }, reduced ? 0 : 250);
+    };
+  }, reduced ? 0 : 800);
+}
+
+/* per-frame work for the open scene */
+let prevT = performance.now();
+function loop(t) {
+  const dt = Math.min(64, t - prevT); prevT = t;
+  if (open && scenes[open]) scenes[open].hooks.frame.forEach(f => f(dt, t));
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* cue light: after a few still seconds, the thing to act on pulses */
+setInterval(() => {
+  document.querySelectorAll('.cue').forEach(el => { if (!open || performance.now() - lastInput < 2500 || done.has(open)) el.classList.remove('cue'); });
+  if (!open || done.has(open) || performance.now() - lastInput < 2500) return;
+  scenes[open].sec.querySelectorAll('[data-cue]').forEach(el => el.classList.add('cue'));
+}, 300);
+
+function relayout() {
+  const g = measure(); const changed = !G || g.cols !== G.cols || Math.abs(g.cw - G.cw) > .5 || g.vrows !== G.vrows;
+  G = g; applyGrid(g);
+  if (changed) {
+    buildHome(); placeArrows();
+    Object.values(scenes).forEach(s => { positionStage(s); s.hooks.resize.forEach(f => f()); });
+  }
+}
+let rz = 0;
+addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(relayout); });
+
+/* ================= THE ACTIONS ================= */
+const BUILD = {};
+const B = BUILD;
+const svgNS = 'http://www.w3.org/2000/svg';
+const pos = (el, x, y, w, h) => {
+  if (x != null) el.style.left = `calc(var(--cw) * ${x})`;
+  if (y != null) el.style.top = `calc(var(--ch) * ${y})`;
+  if (w != null) el.style.width = `calc(var(--cw) * ${w})`;
+  if (h != null) el.style.height = `calc(var(--ch) * ${h})`;
+  return el;
+};
+const mk = (parent, cls, x, y, w, h, tag = 'div') => { const e = document.createElement(tag); e.className = cls || ''; if (tag === 'button') e.type = 'button'; parent.appendChild(e); return pos(e, x, y, w, h); };
+const local = (el, e) => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const nudge = el => el.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 220 });
+const ticks = (parent, n, x, y, w) => { const t = mk(parent, 'ticks', x, y, w, .3); t.innerHTML = '<i></i>'.repeat(n); return k => [...t.children].forEach((e, i) => e.classList.toggle('on', i < k)); };
+const doodle = (parent, html, x, y, w, h, cls = '') => { const d = mk(parent, 'fig ' + cls, x, y, w, h); d.innerHTML = html; return d; };
+function drag(el, h) {
+  el.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    const sx = e.clientX, sy = e.clientY, id = e.pointerId; let moved = false, lx = 0, ly = 0;
+    h.start && h.start(e);
+    const mv = ev => { if (ev.pointerId !== id) return; lx = ev.clientX - sx; ly = ev.clientY - sy; if (Math.abs(lx) + Math.abs(ly) > 5) moved = true; h.move && h.move(ev, lx, ly); };
+    const up = ev => {
+      if (ev.pointerId !== id) return;
+      el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      if (ev.type === 'pointerup') { lx = ev.clientX - sx; ly = ev.clientY - sy; }
+      h.end && h.end(ev, lx, ly, moved);
+    };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  });
+}
+function pinch(el, onScale) {
+  const pts = new Map(); let d0 = 0;
+  el.addEventListener('pointerdown', e => { pts.set(e.pointerId, [e.clientX, e.clientY]); });
+  el.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (d0) onScale(d / d0); d0 = d; }
+  });
+  ['pointerup', 'pointercancel'].forEach(t => el.addEventListener(t, e => { pts.delete(e.pointerId); d0 = 0; }));
+}
+function burst(parent, x, y) {
+  for (let i = 0; i < 10; i++) {
+    const b = mk(parent, 'ink', x, y, .18, .14); const a = i / 10 * Math.PI * 2;
+    b.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${Math.cos(a) * G.cw * 2}px, ${Math.sin(a) * G.cw * 2}px) rotate(90deg)`, opacity: 0 }], { duration: 700, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }).onfinish = () => b.remove();
+  }
+}
+
+/* ================= GRID HELPERS: every part sits in whole cells, and moves a whole cell at a time ================= */
+const cell = (parent, cls, x, y, w = 1, h = 1, tag = 'div') => mk(parent, cls, x, y, w, h, tag);
+const ICONS = {
+  right: '<path class="ln" d="M15 50 H85 M60 24 L85 50 L60 76"/>',
+  left: '<path class="ln" d="M85 50 H15 M40 24 L15 50 L40 76"/>',
+  up: '<path class="ln" d="M50 86 V14 M24 40 L50 14 L76 40"/>',
+  refresh: '<path class="ln" d="M76 54 A27 27 0 1 1 66 30 M70 12 V32 H50"/>',
+  enter: '<path class="ln" d="M80 18 V60 H24 M42 42 L24 60 L42 78"/>',
+  swap: '<path class="ln" d="M14 50 H86 M32 32 L14 50 L32 68 M68 32 L86 50 L68 68"/>',
+  x: '<path class="ln" d="M24 24 L76 76 M76 24 L24 76"/>',
+  square: '<rect class="fl" x="24" y="24" width="52" height="52"/>',
+  circle: '<circle class="fl" cx="50" cy="50" r="28"/>',
+  tri: '<path class="fl" d="M50 20 L82 78 H18 Z"/>',
+  cross: '<path class="ln" d="M24 24 L76 76 M76 24 L24 76" style="stroke-width:5"/>',
+};
+const ico = name => `<svg class="ico" viewBox="0 0 100 100" aria-hidden="true">${ICONS[name]}</svg>`;
+function meter(parent, n, row, x0) {
+  x0 = x0 == null ? Math.floor((8 - n) / 2) : x0;
+  const cs = []; for (let i = 0; i < n; i++) cs.push(cell(parent, 'mcell', x0 + i, row));
+  return k => cs.forEach((c, i) => c.classList.toggle('on', i < k));
+}
+const stepTo = (el, x, y) => { el.style.transform = `translate(calc(var(--cw) * ${x}), calc(var(--ch) * ${y}))`; };
+
+/* -------- ACT I · given actions -------- */
+B.UNLOCK = api => {
+  api.dir('(slide it all the way across)');
+  cell(api.play, 'c-dash', 7, 2);
+  const track = cell(api.play, 'tap', 0, 2, 8, 1);
+  const k = cell(api.play, 'c-ink grab cell-c on-ink', 0, 2); k.innerHTML = ico('right'); k.dataset.cue = '';
+  let kk = 0, base = 0;
+  const set = v => { kk = clamp(Math.round(v), 0, 7); stepTo(k, kk, 0); if (kk === 7) api.done(); };
+  drag(k, { start() { base = kk; }, move(e, dx) { if (!api.isDone) set(base + dx / G.cw); }, end() {} });
+  track.addEventListener('click', () => { if (!api.isDone) set(kk + 1); });
+  api.key(e => { if (e.key === 'ArrowRight') { e.preventDefault(); if (!api.isDone) set(kk + 1); } });
+};
+B.SCROLL = api => {
+  api.dir('(scroll down the column)');
+  const f = cell(api.play, 'feed', 2, 0, 4, 6); f.dataset.cue = ''; f.tabIndex = 0;
+  for (let i = 0; i < 40; i++) { const p = document.createElement('div'); p.className = 'post'; p.innerHTML = `<i></i><b><u style="width:85%"></u><u style="width:${35 + (i * 37) % 45}%"></u></b>`; f.appendChild(p); }
+  let last = 0, px = 0;
+  f.addEventListener('scroll', () => { px += Math.abs(f.scrollTop - last); last = f.scrollTop; if (px > G.ch * 9) api.done(); }, { passive: true });
+};
+B.TAP = api => {
+  api.dir('(tap every square)');
+  const sqs = [];
+  for (let i = 0; i < 6; i++) {
+    const s = cell(api.play, 'sq tap', 1 + i, 2, 1, 1, 'button'); s.setAttribute('aria-label', 'Square'); if (!i) s.dataset.cue = '';
+    s.addEventListener('click', () => { s.classList.add('on'); if (sqs.every(q => q.classList.contains('on'))) api.done(); });
+    sqs.push(s);
+  }
+};
+B.SWIPE = api => {
+  api.dir('(swipe each card away, left or right)');
+  const area = cell(api.play, 'grab', 0, 1, 8, 4); area.dataset.cue = ''; area.style.touchAction = 'none'; area.setAttribute('aria-label', 'Cards');
+  const cards = [];
+  for (let i = 3; i >= 0; i--) { const c = cell(area, 'card cell-c', 2, 0, 4, 4); c.style.position = 'absolute'; c.style.pointerEvents = 'none'; c.innerHTML = ico('swap'); cards.unshift(c); }
+  const left = meter(api.play, 4, 5); left(4);
+  let off = 0;
+  const follow = px => { const c = cards[0]; if (!c) return; off = clamp(Math.round(px / G.cw), -4, 4); stepTo(c, off, 0); };
+  const back = () => { const c = cards[0]; if (!c) return; off = 0; stepTo(c, 0, 0); };
+  const away = d => {
+    const c = cards.shift(); if (!c) return;
+    c.animate([{ transform: `translateX(calc(var(--cw) * ${off}))` }, { transform: `translateX(calc(var(--cw) * ${d * 8}))` }], { duration: 320, easing: 'steps(4, end)', fill: 'forwards' }).onfinish = () => c.remove();
+    off = 0; left(cards.length);
+    if (!cards.length) api.done();
+  };
+  drag(area, { move(e, dx) { follow(dx); }, end() { if (Math.abs(off) >= 2) away(Math.sign(off)); else back(); } });
+  let acc = 0, lastW = 0, spent = false, settle = 0;
+  area.addEventListener('wheel', e => {
+    e.preventDefault();
+    const t = performance.now();
+    if (t - lastW > 260) { acc = 0; spent = false; }
+    lastW = t;
+    if (spent || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    acc += e.deltaX; follow(-acc * .7);
+    clearTimeout(settle); settle = setTimeout(() => { if (!spent) back(); acc = 0; }, 280);
+    if (Math.abs(off) >= 2) { away(Math.sign(off)); spent = true; acc = 0; }
+  }, { passive: false });
+  api.key(e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); if (!e.repeat) away(e.key === 'ArrowLeft' ? -1 : 1); } });
+};
+B.LIKE = api => {
+  api.dir('(tap it twice, quickly)');
+  const ring = [];
+  for (let x = 2; x <= 5; x++) for (let y = 0; y <= 3; y++) if (x === 2 || x === 5 || y === 0 || y === 3) ring.push(cell(api.play, 'flash', x, y));
+  const b = cell(api.play, 'c-frame tap', 3, 1, 2, 2, 'button'); b.style.background = 'var(--paper)'; b.dataset.cue = ''; b.setAttribute('aria-label', 'Like');
+  let lt = 0;
+  b.addEventListener('pointerup', () => {
+    if (api.isDone) return;
+    const t = performance.now();
+    if (t - lt < 450) {
+      lt = 0; b.style.background = 'var(--ink)';
+      ring.forEach((c, i) => c.animate([{ background: 'var(--ink)' }, { background: 'transparent' }], { duration: 420, delay: i * 30, fill: 'backwards' }));
+      api.done();
+    } else { lt = t; b.style.background = 'var(--wash)'; setTimeout(() => { if (!api.isDone && performance.now() - lt >= 440) b.style.background = 'var(--paper)'; }, 450); }
+  });
+};
+B.ZOOM = api => {
+  api.dir('(make it fill the frame)');
+  const fr = cell(api.play, 'c-frame', 1, 0, 6, 6); fr.style.cursor = 'zoom-in'; fr.style.touchAction = 'none'; fr.dataset.cue = '';
+  const sq = cell(fr, 'c-ink', 0, 0); sq.style.position = 'absolute';
+  let k = 1;
+  const set = v => { if (api.isDone) return; k = clamp(v, 1, 6); const o = Math.floor((6 - k) / 2); pos(sq, o, o, k, k); if (k === 6) api.done(); };
+  set(1);
+  fr.addEventListener('click', () => set(k + 1));
+  let acc = 0;
+  fr.addEventListener('wheel', e => { e.preventDefault(); acc += e.deltaY * (e.ctrlKey ? 4 : 1); if (acc < -90) { set(k + 1); acc = 0; } if (acc > 90) { set(k - 1); acc = 0; } }, { passive: false });
+  let pf = 1; pinch(fr, f => { pf *= f; if (pf > 1.25) { set(k + 1); pf = 1; } if (pf < .8) { set(k - 1); pf = 1; } });
+  api.key(e => { if (e.key === '+' || e.key === '=') set(k + 1); if (e.key === '-') set(k - 1); });
+};
+B.DRAG = api => {
+  api.dir('(drag it into the dashed box)');
+  cell(api.play, 'c-dash', 7, 5);
+  const b = cell(api.play, 'c-ink grab', 0, 0); b.dataset.cue = '';
+  let bx = 0, by = 0, sx = 0, sy = 0;
+  const set = (x, y) => { bx = clamp(Math.round(x), 0, 7); by = clamp(Math.round(y), 0, 5); stepTo(b, bx, by); };
+  drag(b, { start() { sx = bx; sy = by; }, move(e, dx, dy) { if (!api.isDone) set(sx + dx / G.cw, sy + dy / G.ch); }, end() { if (bx === 7 && by === 5) api.done(); } });
+};
+B.HOLD = api => {
+  api.dir('(press and hold it)');
+  const box = cell(api.play, 'press', 2, 1, 4, 3); box.dataset.cue = '';
+  const cs = []; for (let y = 2; y >= 0; y--) for (let x = 0; x < 4; x++) { const c = cell(box, 'mcell', x, y); c.style.position = 'absolute'; cs.push(c); }
+  let ms = 0, down = false;
+  box.addEventListener('pointerdown', e => { down = true; try { box.setPointerCapture(e.pointerId); } catch (_) {} });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => box.addEventListener(t, () => { down = false; }));
+  box.addEventListener('contextmenu', e => e.preventDefault());
+  api.key(e => { if (e.key === ' ') { e.preventDefault(); down = true; } });
+  addEventListener('keyup', e => { if (e.key === ' ') down = false; });
+  api.frame(dt => {
+    if (api.isDone) return;
+    ms = down ? Math.min(2500, ms + dt) : Math.max(0, ms - dt * .6);
+    const k = Math.floor(ms / 2500 * 12); cs.forEach((c, i) => c.classList.toggle('on', i < k));
+    if (ms >= 2500) { cs.forEach(c => c.classList.add('on')); api.done(); }
+  });
+};
+B.TYPE = api => {
+  api.dir('(type eight letters)');
+  const frame = cell(api.play, 'c-frame', 0, 2, 8, 1); frame.dataset.cue = '';
+  const cells = []; for (let i = 0; i < 8; i++) cells.push(cell(api.play, 'cellbox', i, 2));
+  const inp = cell(api.play, 'hide-in', 0, 2, 8, 1, 'input'); inp.setAttribute('aria-label', 'Type'); inp.autocomplete = 'off'; inp.spellcheck = false; inp.setAttribute('autocapitalize', 'characters');
+  let k = 0;
+  const caret = () => cells.forEach((c, i) => c.classList.toggle('caret', i === k && k < 8)); caret();
+  inp.addEventListener('input', () => { const v = inp.value.toUpperCase().replace(/\s/g, ''); inp.value = ''; for (const ch of v) if (k < 8) cells[k++].textContent = ch; caret(); if (k >= 8) { inp.blur(); api.done(); } });
+  api.on('enter', () => { if (finePointer) setTimeout(() => inp.focus({ preventScroll: true }), 60); });
+};
+B.DELETE = api => {
+  api.dir('(delete every letter)');
+  const cells = [...'MISTAKES'].map((ch, i) => { const c = cell(api.play, 'cellbox', i, 2); c.textContent = ch; return c; });
+  const row = cell(api.play, 'tap', 0, 2, 8, 1, 'button'); row.style.background = 'transparent'; row.style.border = '0'; row.dataset.cue = ''; row.setAttribute('aria-label', 'Delete');
+  let k = 8;
+  const del = () => { if (k === 0) return; cells[--k].textContent = ''; cells.forEach((c, i) => c.classList.toggle('caret', i === k)); if (k === 0) api.done(); };
+  row.addEventListener('click', del);
+  api.key(e => { if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); del(); } });
+};
+B.SELECT = api => {
+  api.dir('(drag across all eight, in one go)');
+  const sq = []; for (let i = 0; i < 8; i++) sq.push(cell(api.play, 'sq', i, 2));
+  const zone = cell(api.play, 'press', 0, 1, 8, 3); zone.style.cursor = 'crosshair'; zone.dataset.cue = '';
+  let down = false;
+  const mark = e => { const [x] = local(api.play, e), i = Math.floor(x / G.cw); if (i >= 0 && i < 8) sq[i].classList.add('on'); if (sq.every(s => s.classList.contains('on'))) api.done(); };
+  zone.addEventListener('pointerdown', e => { down = true; try { zone.setPointerCapture(e.pointerId); } catch (_) {} if (!api.isDone) sq.forEach(s => s.classList.remove('on')); mark(e); });
+  zone.addEventListener('pointermove', e => { if (down) mark(e); });
+  ['pointerup', 'pointercancel'].forEach(t => zone.addEventListener(t, () => { down = false; if (!api.isDone) sq.forEach(s => s.classList.remove('on')); }));
+};
+B.COPY = api => {
+  api.dir('(tap it to make copies)');
+  for (let i = 1; i < 8; i++) cell(api.play, 'c-dash faint-dash', i, 2);
+  let k = 1;
+  const first = cell(api.play, 'c-ink tap', 0, 2, 1, 1, 'button'); first.style.border = '0'; first.dataset.cue = ''; first.setAttribute('aria-label', 'Copy'); first.style.zIndex = 1;
+  const copy = () => {
+    if (k >= 8) return; const i = k++;
+    const c = cell(api.play, 'c-ink', 0, 2);
+    c.animate([{ transform: 'none' }, { transform: `translateX(calc(var(--cw) * ${i}))` }], { duration: 60 * i, easing: `steps(${i}, end)`, fill: 'forwards' });
+    if (k >= 8) setTimeout(() => api.done(), 500);
+  };
+  first.addEventListener('click', copy);
+  api.key(e => { if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v')) copy(); });
+};
+B.REFRESH = api => {
+  api.dir('(pull it down, then let go)');
+  const sp = cell(api.play, 'cell-c', 3, 0, 2, 1); sp.innerHTML = ico('refresh'); sp.style.opacity = 0;
+  const page = cell(api.play, 'c-frame grab', 2, 1, 4, 4); page.dataset.cue = ''; page.style.background = 'var(--paper)';
+  for (let i = 0; i < 4; i++) { const r = cell(page, 'rowbar', 0, i, 4, 1); r.style.position = 'absolute'; }
+  let off = 0;
+  drag(page, {
+    move(e, dx, dy) { if (api.isDone) return; off = clamp(Math.round(dy / G.ch), 0, 1); stepTo(page, 0, off); sp.style.opacity = off; },
+    end() {
+      stepTo(page, 0, 0);
+      if (off >= 1 && !api.isDone) { sp.style.opacity = 1; sp.querySelector('svg').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(720deg)' }], { duration: 800 }); setTimeout(() => { sp.style.opacity = 0; api.done(); }, 800); }
+      else sp.style.opacity = 0;
+      off = 0;
+    },
+  });
+};
+B.WAIT = api => {
+  api.dir('(do nothing. just wait)');
+  const pcs = []; for (let i = 0; i < 8; i++) pcs.push(cell(api.play, 'mcell', i, 2));
+  const dots = cell(api.play, 'dots cell-c', 0, 3, 8, 1); dots.style.fontSize = 'var(--mid)';
+  let k = 0;
+  api.every(750, () => { if (k < 8) { pcs[k++].classList.add('on'); if (k === 8) api.done(); } });
+};
+B.SEARCH = api => {
+  api.dir('(type a question, press enter)');
+  const box = cell(api.play, 'c-frame', 1, 1, 6, 1); box.dataset.cue = '';
+  const inp = document.createElement('input'); inp.className = 'input-line'; Object.assign(inp.style, { position: 'absolute', left: '12px', right: '12px', top: '50%', transform: 'translateY(-50%)', borderBottom: '0' });
+  inp.setAttribute('aria-label', 'Search'); inp.autocomplete = 'off'; box.appendChild(inp);
+  const btn = cell(api.play, 'c-ink tap cell-c on-ink', 7, 1, 1, 1, 'button'); btn.innerHTML = ico('enter'); btn.style.border = '0'; btn.setAttribute('aria-label', 'Search');
+  const res = []; for (let i = 0; i < 3; i++) { const r = cell(api.play, 'rowbar', 1, 2 + i, 6, 1); r.style.opacity = 0; r.style.transition = `opacity .3s ${i * .15}s`; res.push(r); }
+  const submit = () => { if (!inp.value.trim()) { inp.focus(); nudge(box); return; } res.forEach(r => { r.style.opacity = 1; }); inp.blur(); setTimeout(() => api.done(), 700); };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  btn.addEventListener('click', submit);
+  api.on('enter', () => { if (finePointer) setTimeout(() => inp.focus({ preventScroll: true }), 60); });
+};
+B.CLOSE = api => {
+  api.dir('(close every pop-up)');
+  const spots = [[0, 0], [5, 1], [2, 2], [4, 4], [0, 4]];
+  let closed = 0, live = 0;
+  const spawn = () => {
+    if (closed + live >= 5 || api.isDone) return;
+    const [x, y] = spots[closed + live];
+    const p = cell(api.play, 'popup', x, y, 3, 2); live++;
+    const bar = cell(p, 'c-ink', 0, 0, 2, 1); bar.style.position = 'absolute';
+    const xb = cell(p, 'c-frame tap cell-c xbtn', 2, 0, 1, 1, 'button'); xb.style.position = 'absolute'; xb.innerHTML = ico('x'); xb.setAttribute('aria-label', 'Close'); xb.dataset.cue = '';
+    const body = cell(p, 'rowbar', 0, 1, 3, 1); body.style.position = 'absolute';
+    xb.addEventListener('click', () => {
+      live--; closed++;
+      p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'steps(2, end)', fill: 'forwards' }).onfinish = () => p.remove();
+      if (closed >= 5) api.done(); else setTimeout(spawn, 300);
+    });
+  };
+  api.on('enter', () => { spawn(); setTimeout(spawn, 600); });
+};
+
+/* -------- ACT II · rewritten actions -------- */
+B.WIPE = api => {
+  api.dir('(rub the fog away)');
+  const pane = cell(api.play, 'c-frame', 1, 0, 6, 6); pane.style.overflow = 'hidden'; pane.dataset.cue = '';
+  pane.style.background = 'repeating-conic-gradient(var(--ink) 0 25%, var(--paper) 0 50%) 0 0 / calc(var(--cw) * 2) calc(var(--ch) * 2)';
+  /* the fog is a sheet of cells; rubbing clears whole cells */
+  const fog = []; for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) { const f = cell(pane, 'fogcell', x, y); f.style.position = 'absolute'; fog.push(f); }
+  const zone = cell(pane, 'press', 0, 0, 6, 6); zone.style.position = 'absolute'; zone.style.cursor = 'crosshair';
+  let down = false, cleared = 0;
+  const rub = e => {
+    const [x, y] = local(pane, e), cx = Math.floor(x / G.cw), cy = Math.floor(y / G.ch);
+    if (cx < 0 || cx > 5 || cy < 0 || cy > 5) return;
+    const f = fog[cy * 6 + cx]; if (f.classList.contains('gone')) return;
+    f.classList.add('gone'); cleared++;
+    if (cleared >= 26 && !api.isDone) { fog.forEach(q => q.classList.add('gone')); api.done(); }
+  };
+  zone.addEventListener('pointerdown', e => { down = true; try { zone.setPointerCapture(e.pointerId); } catch (_) {} rub(e); });
+  zone.addEventListener('pointermove', e => { if (down) rub(e); });
+  ['pointerup', 'pointercancel'].forEach(t => zone.addEventListener(t, () => { down = false; }));
+};
+B.PEEL = api => {
+  api.dir('(peel it off, from the corner)');
+  const order = [[1, 1], [0, 1], [1, 0], [0, 0]];
+  const st = cell(api.play, 'grab', 3, 1, 2, 2); st.dataset.cue = '';
+  const parts = order.map(([x, y]) => { const c = cell(st, 'c-ink peelcell', x, y); c.style.position = 'absolute'; return c; });
+  parts[0].classList.add('corner');
+  let peeled = 0;
+  const show = k => { parts.forEach((c, i) => { c.classList.toggle('off', i < k); c.classList.toggle('corner', i === k); }); };
+  drag(st, {
+    move(e, dx, dy) { if (api.isDone) return; peeled = clamp(Math.floor(Math.max(0, (dx + dy) / 2) / (G.cw * .5)), 0, 4); show(peeled); },
+    end(e, dx, dy, moved) { if (api.isDone) return; if (!moved) { peeled = 0; show(0); parts[0].animate([{ opacity: 1 }, { opacity: .4 }, { opacity: 1 }], { duration: 300 }); return; } if (peeled >= 4) api.done(); else { peeled = 0; show(0); } },
+  });
+};
+B.FOLD = api => {
+  api.dir('(fold the right half over)');
+  const sh = cell(api.play, 'sheet', 2, 1, 4, 3);
+  const l = document.createElement('div'); l.className = 'half'; l.style.left = '0'; l.style.borderRight = '1px dashed var(--ink)'; sh.appendChild(l);
+  const r = document.createElement('div'); r.className = 'half r grab'; sh.appendChild(r); r.dataset.cue = '';
+  let a = 0;
+  const set = v => { a = clamp(v, 0, 180); r.style.setProperty('--a', a); r.classList.toggle('back', a > 90); };
+  drag(r, {
+    start() { r.style.transition = 'none'; },
+    move(e, dx) { if (!api.isDone) set(Math.round(-dx / (G.cw * 2) * 4) * 45); },
+    end(e, dx, dy, moved) { r.style.transition = 'transform .3s steps(4, end)'; if (api.isDone) return; if (a > 90 || !moved) { set(180); api.done(); } else set(0); },
+  });
+};
+B.KNOCK = api => {
+  api.dir('(knock three times)');
+  const leaf = cell(api.play, 'leaf tap', 3, 0, 2, 4); leaf.dataset.cue = '';
+  const flashes = []; for (let y = 0; y < 4; y++) for (let x = 0; x < 2; x++) { const f = cell(leaf, 'flash', x, y); f.style.position = 'absolute'; flashes.push(f); }
+  const knocks = meter(api.play, 3, 5);
+  const times = [];
+  leaf.addEventListener('pointerdown', e => {
+    if (api.isDone) return;
+    const t = performance.now(); times.push(t); while (times.length && t - times[0] > 2500) times.shift();
+    knocks(times.length);
+    const [x, y] = local(leaf, e), f = flashes[clamp(Math.floor(y / G.ch), 0, 3) * 2 + clamp(Math.floor(x / G.cw), 0, 1)];
+    f.animate([{ background: 'var(--ink)' }, { background: 'transparent' }], { duration: 300 });
+    if (times.length >= 3) setTimeout(() => { leaf.classList.add('opened'); api.done(); }, 300);
+  });
+};
+B.SHAKE = api => {
+  api.dir('(grab the jar and shake it)');
+  const jar = cell(api.play, 'c-frame grab', 3, 1, 2, 3); jar.dataset.cue = ''; jar.style.background = 'var(--paper)';
+  const bits = []; for (let y = 0; y < 3; y++) for (let x = 0; x < 2; x++) { const b = cell(jar, 'bitcell', x, y); b.style.position = 'absolute'; bits.push(b); }
+  const floor = [0, 7, 1, 6, 2, 5];
+  let off = 0, lastOff = 0, lastDir = 0, out = 0;
+  const drop = () => {
+    const b = bits.find(q => !q.classList.contains('out')); if (!b) return; b.classList.add('out');
+    const fx = floor[out]; out++;
+    const f = cell(api.play, 'bitcell', 3 + off + (bits.indexOf(b) % 2), 1 + Math.floor(bits.indexOf(b) / 2));
+    const dy = 5 - (1 + Math.floor(bits.indexOf(b) / 2)), dx = fx - (3 + off + (bits.indexOf(b) % 2));
+    f.animate([{ transform: 'none' }, { transform: `translate(calc(var(--cw) * ${dx}), calc(var(--ch) * ${dy}))` }], { duration: 400, easing: `steps(${Math.max(1, dy)}, end)`, fill: 'forwards' });
+    if (out >= bits.length) api.done();
+  };
+  drag(jar, {
+    move(e, dx) {
+      off = clamp(Math.round(dx / G.cw), -3, 3); stepTo(jar, off, 0);
+      if (off !== lastOff) { const d = Math.sign(off - lastOff); if (lastDir && d !== lastDir) drop(); lastDir = d; lastOff = off; }
+    },
+    end() { off = 0; lastOff = 0; lastDir = 0; stepTo(jar, 0, 0); },
+  });
+};
+B.CATCH = api => {
+  api.dir('(catch it. it gets tired)');
+  const b = cell(api.play, 'c-ink tap', 3, 2, 1, 1, 'button'); b.style.border = '0'; b.dataset.cue = ''; b.setAttribute('aria-label', 'Catch');
+  let energy = 5, bx = 3, blink = null;
+  const hop = () => {
+    energy--; let x, y; do { x = Math.floor(Math.random() * 8); y = Math.floor(Math.random() * 6); } while (Math.abs(x - bx) < 2);
+    bx = x; pos(b, x, y);
+    if (energy <= 0) blink = b.animate([{ opacity: 1 }, { opacity: .35 }], { duration: 300, iterations: Infinity, direction: 'alternate', easing: 'steps(1, end)' });
+  };
+  api.play.addEventListener('pointermove', e => {
+    if (energy <= 0 || api.isDone || e.pointerType !== 'mouse' || open !== api.x.n) return;
+    const r = b.getBoundingClientRect(); if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < G.cw * 1.05) hop();
+  });
+  b.addEventListener('pointerdown', () => { if (api.isDone) return; if (energy > 0) { hop(); return; } if (blink) blink.cancel(); api.done(); });
+};
+B.STACK = api => {
+  api.dir('(tap to drop it · stack four)');
+  cell(api.play, 'c-ink', 2, 5, 4, 1);
+  const zone = cell(api.play, 'tap', 0, 0, 8, 6, 'button'); zone.style.background = 'transparent'; zone.style.border = '0'; zone.dataset.cue = ''; zone.setAttribute('aria-label', 'Drop');
+  let lv = 0, w = 4, left = 2, x = 0, dir = 1, mv = null, acc = 0;
+  const spawn = () => { mv = cell(api.play, 'c-ink', 0, 4 - lv, w, 1); mv.style.pointerEvents = 'none'; x = 0; dir = 1; acc = 0; };
+  api.on('enter', () => { if (!mv && !api.isDone && lv < 4) spawn(); });
+  api.frame(dt => {
+    if (!mv || api.isDone) return;
+    acc += dt; const tick = Math.max(110, 230 - lv * 35);
+    while (acc >= tick) { acc -= tick; x += dir; if (x > 8 - w) { x = 8 - w - 1; dir = -1; } if (x < 0) { x = 1; dir = 1; } }
+    pos(mv, x);
+  });
+  const drop = () => {
+    if (!mv || api.isDone) return;
+    const a = Math.max(x, left), b2 = Math.min(x + w, left + w), ov = b2 - a, m = mv; mv = null;
+    if (ov <= 0) { m.animate([{ transform: 'none' }, { transform: `translateY(calc(var(--ch) * ${lv + 2}))`, opacity: 0 }], { duration: 400, easing: `steps(${lv + 2}, end)`, fill: 'forwards' }).onfinish = () => m.remove(); setTimeout(spawn, 400); return; }
+    pos(m, a, null, ov); left = a; w = ov; lv++;
+    if (lv >= 4) api.done(); else spawn();
+  };
+  zone.addEventListener('pointerdown', drop);
+  api.key(e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); drop(); } });
+};
+B.STIR = api => {
+  api.dir('(stir in circles)');
+  const RING = [[1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1], [0, 0]];   /* clockwise from the top */
+  const ring = RING.map(([x, y]) => cell(api.play, 'mcell', 3 + x, 1 + y));
+  const mid = cell(api.play, 'c-wash', 4, 2); mid.dataset.cue = '';
+  const zone = cell(api.play, 'press', 0, 0, 8, 6); zone.style.cursor = 'crosshair';
+  const turns = meter(api.play, 3, 5);
+  let prev = -1, steps = 0;
+  zone.addEventListener('pointermove', e => {
+    if (api.isDone) return;
+    const [x, y] = local(api.play, e), dx = x / G.cw - 4.5, dy = y / G.ch - 2.5;
+    if (Math.hypot(dx, dy) > 3) { prev = -1; return; }
+    const a = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360 + 22.5) % 360, i = Math.floor(a / 45);
+    if (prev >= 0 && i !== prev) { let d = i - prev; if (d > 4) d -= 8; if (d < -4) d += 8; steps += d; }
+    prev = i; ring.forEach((c, j) => c.classList.toggle('on', j === i));
+    turns(Math.floor(Math.abs(steps) / 8)); if (Math.abs(steps) >= 24) api.done();
+  });
+  zone.addEventListener('pointerdown', e => { try { zone.setPointerCapture(e.pointerId); } catch (_) {} });
+};
+B.SWEEP = api => {
+  api.dir('(sweep the crumbs off the page)');
+  const spots = [[1, 1], [2, 4], [3, 2], [4, 0], [4, 3], [5, 5], [6, 1], [6, 4], [2, 0], [5, 2]];
+  const crumbs = spots.map(([x, y]) => ({ x, y, el: cell(api.play, 'bitcell', x, y) }));
+  const zone = cell(api.play, 'press', 0, 0, 8, 6); zone.dataset.cue = ''; zone.style.cursor = 'grab';
+  let down = false, lc = null;
+  const at = e => { const [x, y] = local(api.play, e); return [Math.floor(x / G.cw), Math.floor(y / G.ch)]; };
+  zone.addEventListener('pointerdown', e => { down = true; try { zone.setPointerCapture(e.pointerId); } catch (_) {} lc = at(e); });
+  zone.addEventListener('pointermove', e => {
+    if (!down || api.isDone) return;
+    const c = at(e); if (!lc || (c[0] === lc[0] && c[1] === lc[1])) return;
+    const ddx = c[0] - lc[0], ddy = c[1] - lc[1];
+    const d = Math.abs(ddx) >= Math.abs(ddy) ? [Math.sign(ddx), 0] : [0, Math.sign(ddy)];
+    crumbs.forEach(k => {
+      if (k.gone || k.x !== c[0] || k.y !== c[1]) return;
+      k.x += d[0]; k.y += d[1];
+      if (k.x < 0 || k.x > 7 || k.y < 0 || k.y > 5) { k.gone = true; k.el.remove(); } else pos(k.el, k.x, k.y);
+    });
+    lc = c;
+    if (crumbs.every(k => k.gone)) api.done();
+  });
+  ['pointerup', 'pointercancel'].forEach(t => zone.addEventListener(t, () => { down = false; lc = null; }));
+};
+B.ROTATE = api => {
+  api.dir('(turn it until it points up)');
+  cell(api.play, 'c-dash', 3, 0, 2, 1);
+  const dial = cell(api.play, 'c-frame grab cell-c', 3, 1, 2, 2); dial.innerHTML = ico('up'); dial.dataset.cue = '';
+  const svg = dial.querySelector('svg'); svg.style.transition = 'transform .15s steps(1, end)';
+  let ang = 135, a0 = 0, s0 = 0;
+  const set = v => { ang = Math.round(v / 45) * 45; svg.style.transform = `rotate(${ang}deg)`; };
+  const angOf = e => { const r = dial.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
+  const check = () => { if (((ang % 360) + 360) % 360 === 0 && !api.isDone) api.done(); };
+  set(135);
+  drag(dial, { start(e) { a0 = angOf(e); s0 = ang; }, move(e) { if (!api.isDone) set(s0 + angOf(e) - a0); }, end(e, dx, dy, moved) { if (!moved && !api.isDone) set(ang - 45); check(); } });
+  api.key(e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); set(ang + (e.key === 'ArrowRight' ? 45 : -45)); check(); } });
+};
+B.FLIP = api => {
+  api.dir('(flip two at a time · find the pairs)');
+  const deck = shuffle(['square', 'square', 'circle', 'circle', 'tri', 'tri', 'cross', 'cross']);
+  let up = [], got = 0, lock = false;
+  deck.forEach((s, i) => {
+    const c = cell(api.play, 'flipcard', (i % 4) * 2, Math.floor(i / 4) * 3, 2, 2, 'button'); c.style.border = '0'; c.style.background = 'transparent'; c.dataset.s = s;
+    c.innerHTML = `<div class="in"><div class="b"></div><div class="f">${ico(s)}</div></div>`; if (!i) c.dataset.cue = '';
+    c.addEventListener('click', () => {
+      if (lock || c.classList.contains('up') || api.isDone) return;
+      c.classList.add('up'); up.push(c);
+      if (up.length === 2) {
+        const [a, b] = up; up = [];
+        if (a.dataset.s === b.dataset.s) { a.classList.add('got'); b.classList.add('got'); got += 2; if (got === 8) setTimeout(() => api.done(), 450); }
+        else { lock = true; setTimeout(() => { a.classList.remove('up'); b.classList.remove('up'); lock = false; }, 750); }
+      }
+    });
+  });
+};
+B.POUR = api => {
+  api.dir('(tip the glass over to the right)');
+  const L = cell(api.play, 'glassbox grab', 1, 1, 2, 4); L.dataset.cue = '';
+  const R = cell(api.play, 'glassbox', 5, 1, 2, 4);
+  const lc = [], rc = [];
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 2; x++) { const a = cell(L, 'mcell on', x, y); a.style.position = 'absolute'; lc.push(a); const b = cell(R, 'mcell', x, y); b.style.position = 'absolute'; rc.push(b); }
+  const spout = [cell(api.play, 'mcell', 3, 1), cell(api.play, 'mcell', 4, 1)];
+  let tipped = false, held = 0, auto = 0, n = 8, acc = 0;
+  const tip = v => { tipped = v; stepTo(L, v ? 1 : 0, 0); };
+  drag(L, { move(e, dx) { tip(dx > G.cw * .5); }, end(e, dx, dy, moved) { if (!moved) { tip(true); auto = 2200; } else tip(false); } });
+  api.frame(dt => {
+    if (auto > 0) { auto -= dt; if (auto <= 0) tip(false); }
+    const pouring = tipped && n > 0 && !api.isDone;
+    spout.forEach((s, i) => s.classList.toggle('on', pouring && Math.floor(performance.now() / 160) % 2 === i));
+    if (!pouring) return;
+    acc += dt;
+    while (acc > 200 && n > 0) {
+      acc -= 200; n--;
+      lc.find(c => c.classList.contains('on')).classList.remove('on');
+      rc[7 - (7 - n)] && [...rc].reverse().find(c => !c.classList.contains('on')).classList.add('on');
+      if (n === 0) { tip(false); spout.forEach(s => s.classList.remove('on')); api.done(); }
+    }
+  });
+};
+B.CONNECT = api => {
+  api.dir('(connect the dots, in order)');
+  const P = [[2, 0], [2, 3], [5, 5], [2, 5], [5, 3], [2, 3]], order = [0, 1, 2, 3, 4, 1];
+  const svg = document.createElementNS(svgNS, 'svg'); svg.setAttribute('viewBox', '0 0 8 6'); svg.setAttribute('preserveAspectRatio', 'none');
+  Object.assign(svg.style, { position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none' }); api.play.appendChild(svg);
+  const dots = P.slice(0, 5).map(([x, y]) => { const d = cell(api.play, 'dotcell tap', x, y, 1, 1, 'button'); d.setAttribute('aria-label', 'Dot'); return d; });
+  let k = 0;
+  const mark = () => dots.forEach((d, i) => d.classList.toggle('next', k < order.length && order[k] === i)); mark();
+  dots.forEach((d, i) => d.addEventListener('click', () => {
+    if (api.isDone) return;
+    if (order[k] !== i) { nudge(d); return; }
+    if (k > 0) { const a = P[k - 1], b = P[k], ln = document.createElementNS(svgNS, 'line'); [['x1', a[0] + .5], ['y1', a[1] + .5], ['x2', b[0] + .5], ['y2', b[1] + .5]].forEach(([nm, v]) => ln.setAttribute(nm, v)); ln.setAttribute('stroke', 'currentColor'); ln.setAttribute('stroke-width', '2.5'); ln.setAttribute('vector-effect', 'non-scaling-stroke'); svg.appendChild(ln); }
+    d.classList.add('hit'); k++; mark(); if (k === order.length) api.done();
+  }));
+};
+B.BALANCE = api => {
+  api.dir('(keep the ball on the plank · lean the other way)');
+  const plank = []; for (let i = 0; i < 8; i++) plank.push(cell(api.play, 'mcell', i, 3));
+  const zone = cell(api.play, 'press', 0, 0, 8, 6); zone.style.cursor = 'ew-resize'; zone.dataset.cue = '';
+  const secs = meter(api.play, 6, 5);
+  let ball = 4, ctrl = 0, gust = .6, acc = 0, okMs = 0;
+  const steer = e => { const [x] = local(api.play, e); ctrl = clamp((x / G.cw - 4) / 3, -1, 1); };
+  zone.addEventListener('pointermove', steer); zone.addEventListener('pointerdown', steer);
+  const draw = () => plank.forEach((c, i) => { c.classList.toggle('on', i === ball); c.classList.toggle('low', (ctrl + gust > .35 && i >= 4) || (ctrl + gust < -.35 && i < 4)); });
+  api.frame(dt => {
+    if (api.isDone) return;
+    gust = clamp(gust + (Math.random() - .5) * .0016 * dt, -.9, .9);
+    acc += dt; okMs += dt;
+    if (acc >= 320) {
+      acc = 0; const t = ctrl + gust;
+      if (t > .35) ball++; else if (t < -.35) ball--;
+      if (ball < 0 || ball > 7) { ball = 4; okMs = 0; plank.forEach(c => c.animate([{ opacity: .3 }, { opacity: 1 }], { duration: 300 })); }
+    }
+    draw(); secs(Math.floor(okMs / 1000));
+    if (okMs >= 6000) api.done();
+  });
+};
+/* -------- INTERMISSION -------- */
+B.STRETCH = api => {
+  api.dir('(pull the arms up)');
+  const fig = doodle(api.play, D.STRETCH(), 2.5, 0, 3, 5.4);
+  const arms = [...fig.querySelectorAll('.arm')];
+  const handle = mk(api.play, 'ink grab glyph', 3.5, 4.8, 1, 1); handle.textContent = '↑'; handle.dataset.cue = '';
+  let t = 0, base = 0;
+  const set = v => {
+    t = clamp(v, 0, 1); if (t >= .98) t = 1;
+    arms.forEach(a => { const side = +a.dataset.side, ang = (side < 0 ? 141 + 102 * t : 39 - 102 * t) * Math.PI / 180; a.setAttribute('d', `M50 39 L${(50 + 25 * Math.cos(ang)).toFixed(1)} ${(39 + 25 * Math.sin(ang)).toFixed(1)}`); });
+    handle.style.transform = `translateY(calc(var(--ch) * ${-t * 3.6}))`;
+    if (t === 1 && !api.isDone) api.done();
+  };
+  drag(handle, { start() { handle.style.transition = 'none'; base = t; }, move(e, dx, dy) { if (!api.isDone) set(base - dy / (G.ch * 3.6)); }, end(e, dx, dy, moved) { handle.style.transition = 'transform .3s'; if (!moved && !api.isDone) set(t + .26); } });
+};
+B.SIP = api => {
+  api.dir('(take five sips)');
+  const cup = mk(api.play, 'tap fig', 2.3, 0, 3.4, 5.6, 'button'); cup.style.background = 'transparent'; cup.style.border = '0'; cup.innerHTML = D.SIP(); cup.dataset.cue = ''; cup.setAttribute('aria-label', 'Sip');
+  const lq = cup.querySelector('.lq'); const tk = ticks(api.play, 5, 0, 5.6, 8); let sips = 0;
+  cup.addEventListener('click', () => {
+    if (sips >= 5) return; sips++; lq.setAttribute('y', 46 + sips * 9); tk(sips);
+    cup.animate([{ transform: 'none' }, { transform: 'rotate(-14deg) translateY(-6px)' }, { transform: 'none' }], { duration: 420 });
+    if (sips >= 5) setTimeout(() => api.done(), 450);
+  });
+};
+B.SNACK = api => {
+  api.dir('(catch the popcorn · eat eight)');
+  doodle(api.play, D.SNACK(), 2.5, 2.2, 3, 3.6);
+  const tk = ticks(api.play, 8, 0, 5.7, 8); let eaten = 0;
+  const popOne = () => {
+    if (api.isDone) return;
+    const k = mk(api.play, 'kern', 3.7 + (Math.random() - .5) * .8, 2.4, null, null, 'button'); k.setAttribute('aria-label', 'Popcorn'); k.dataset.cue = '';
+    const dx = (Math.random() - .5) * G.cw * 5, up = G.ch * (1.4 + Math.random() * .8);
+    const a = k.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx * .5}px, ${-up}px)`, offset: .45 }, { transform: `translate(${dx}px, ${G.ch * 3.2}px)` }], { duration: 2400, easing: 'linear', fill: 'forwards' });
+    a.onfinish = () => k.remove();
+    k.addEventListener('pointerdown', () => { if (api.isDone) return; eaten++; tk(eaten); a.cancel(); k.remove(); if (eaten >= 8) api.done(); });
+  };
+  api.every(620, popOne);
+};
+B.CHAT = api => {
+  api.dir('(talk back and forth · tap whoever is next)');
+  const box = doodle(api.play, D.CHAT(), 1, 0, 6, 6);
+  const bL = box.querySelector('.bL'), bR = box.querySelector('.bR');
+  [bL, bR].forEach(b => { b.style.animation = 'none'; b.style.opacity = .12; b.style.transition = 'opacity .2s'; });
+  const L = mk(api.play, 'tap', 1, 2.4, 3, 3.6, 'button'), R = mk(api.play, 'tap', 4, 2.4, 3, 3.6, 'button');
+  [L, R].forEach((b, i) => { b.style.background = 'transparent'; b.style.border = '0'; b.setAttribute('aria-label', i ? 'Right' : 'Left'); });
+  L.dataset.cue = '';
+  const tk = ticks(api.play, 6, 0, 5.65, 8); let turn = 0, n = 0;
+  const say = side => {
+    if (api.isDone) return;
+    if (side !== turn) { nudge(side ? R : L); return; }
+    (side ? bR : bL).style.opacity = 1; (side ? bL : bR).style.opacity = .12;
+    n++; tk(n); turn = 1 - turn; delete L.dataset.cue; delete R.dataset.cue; (turn ? R : L).dataset.cue = '';
+    if (n >= 6) api.done();
+  };
+  L.addEventListener('click', () => say(0)); R.addEventListener('click', () => say(1));
+};
+B.DANCE = api => {
+  api.dir('(tap on the beat)');
+  const fig = doodle(api.play, D.DANCE(), 2.5, 0, 3, 4.4);
+  const BEAT = 700, hopG = fig.querySelector('g'); hopG.style.animationDuration = BEAT + 'ms';
+  fig.querySelectorAll('g g').forEach(g => { g.style.animationDuration = BEAT * 2 + 'ms'; });
+  const floorEl = mk(api.play, 'floorline', .5, 4.75, 7, .35); const floor = [floorEl];
+  const zone = mk(api.play, 'tap', 0, 0, 8, 6, 'button'); zone.style.background = 'transparent'; zone.style.border = '0'; zone.dataset.cue = ''; zone.setAttribute('aria-label', 'Tap on the beat');
+  const tk = ticks(api.play, 6, 0, 5.65, 8);
+  let t0 = performance.now(), good = 0;
+  api.on('enter', () => { t0 = performance.now(); hopG.getAnimations && fig.getAnimations({ subtree: true }).forEach(a => { a.currentTime = 0; }); });
+  api.frame((dt, t) => { const ph = ((t - t0) % BEAT) / BEAT, lit = ph < .2 || ph > .92; floor.forEach(f => { f.style.background = lit ? 'var(--ink)' : ''; }); });
+  const hit = () => {
+    if (api.isDone) return;
+    const ph = (performance.now() - t0) % BEAT, off = Math.min(ph, BEAT - ph);
+    if (off < 190) { good++; tk(good); fig.animate([{ transform: 'none' }, { transform: 'translateY(-10%) rotate(-6deg)' }, { transform: 'none' }], { duration: 300 }); if (good >= 6) api.done(); }
+    else nudge(fig);
+  };
+  zone.addEventListener('pointerdown', hit);
+  api.key(e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) hit(); } });
+};
+B.QUEUE = api => {
+  api.dir('(wait your turn)');
+  const door = mk(api.play, 'frame', 6.6, .6, 1.2, 4); door.style.background = 'var(--paper)';
+  const wc = mk(api.play, 'label', 6.6, -.1, 1.2, .7); wc.style.fontSize = 'var(--small)'; wc.textContent = 'WC';
+  const person = me => `<svg class="doodle boil" viewBox="0 0 30 80" aria-hidden="true"><circle class="${me ? 'fl' : 'ln'}" cx="15" cy="12" r="7"/><path class="ln" d="M15 19 L15 50 M15 50 L8 76 M15 50 L22 76 M15 28 L6 40 M15 28 L24 40"/></svg>`;
+  const xs = [5.2, 3.8, 2.4, 1.0];
+  const people = xs.map((x, i) => { const p = mk(api.play, 'fig slowmo', x, 1.6, .9, 3); p.innerHTML = person(i === 3); return p; });
+  mk(api.play, '', 0, 4.65, 8, 0).style.borderTop = '1px solid var(--ink)';
+  let front = 0, busy = false;
+  const step = () => {
+    if (api.isDone || busy) return; busy = true;
+    const p = people[front];
+    door.animate([{ background: 'var(--paper)' }, { background: 'var(--wash)' }, { background: 'var(--paper)' }], { duration: 900 });
+    p.style.transform = `translateX(calc(var(--cw) * 1.6))`; p.style.opacity = 0; p.style.transition = 'transform .6s ease, opacity .6s ease';
+    front++;
+    setTimeout(() => {
+      people.slice(front).forEach(q => { const cur = parseFloat(q.dataset.dx || 0) + 1.4; q.dataset.dx = cur; q.style.transform = `translateX(calc(var(--cw) * ${cur}))`; });
+      busy = false;
+      if (front >= 3) { setTimeout(() => { const me = people[3]; me.style.transform = `translateX(calc(var(--cw) * ${parseFloat(me.dataset.dx) + 1.6}))`; me.style.opacity = 0; api.done(); }, 900); }
+    }, 650);
+  };
+  api.every(1600, () => { if (front < 3) step(); });
+};
+
+/* -------- ACT III · shared actions -------- */
+B.PASS = api => {
+  api.dir('(hand the screen to someone · they press and hold)');
+  const b = cell(api.play, 'bigbtn', 2, 1, 4, 2, 'button'); b.dataset.cue = '';
+  const cs = []; for (let i = 0; i < 8; i++) { const c = cell(b, 'mcell', i % 4, Math.floor(i / 4)); c.style.position = 'absolute'; c.style.border = '0'; cs.push(c); }
+  const t = document.createElement('span'); t.textContent = 'RECEIVED'; b.appendChild(t);
+  let ms = 0, down = false;
+  b.addEventListener('pointerdown', e => { down = true; try { b.setPointerCapture(e.pointerId); } catch (_) {} });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, () => { down = false; }));
+  b.addEventListener('contextmenu', e => e.preventDefault());
+  api.frame(dt => { if (api.isDone) return; ms = down ? ms + dt : Math.max(0, ms - dt); const k = Math.floor(ms / 150); cs.forEach((c, i) => c.classList.toggle('on', i < k)); if (ms >= 1200) { t.style.color = 'var(--paper)'; api.done(); } });
+};
+B.SWAP = api => {
+  api.dir('(drag one onto the other)');
+  const A = cell(api.play, 'c-ink grab', 1, 2, 2, 2), Bx = cell(api.play, 'c-frame grab', 5, 2, 2, 2); A.dataset.cue = ''; Bx.style.background = 'var(--paper)';
+  const st = { A: 1, B: 5 };
+  const hook = (el, me, other) => { let off = 0; drag(el, {
+    start() { el.style.zIndex = 2; },
+    move(e, dx) { if (api.isDone) return; off = clamp(Math.round(dx / G.cw), -st[me], 6 - st[me]); stepTo(el, off, 0); },
+    end() {
+      el.style.zIndex = ''; stepTo(el, 0, 0);
+      if (Math.abs(st[me] + off - st[other]) <= 1 && !api.isDone) { const a = st[me]; st[me] = st[other]; st[other] = a; pos(el, st[me]); pos(me === 'A' ? Bx : A, st[other]); api.done(); }
+      off = 0;
+    },
+  }); };
+  hook(A, 'A', 'B'); hook(Bx, 'B', 'A');
+};
+B.JOIN = api => {
+  api.dir('(press both at once · two fingers, or F and J)');
+  const L = cell(api.play, 'pad press cell-c', 1, 1, 3, 3), R = cell(api.play, 'pad press cell-c', 4, 1, 3, 3); L.dataset.cue = ''; R.dataset.cue = '';
+  L.innerHTML = '<span class="label">F</span>'; R.innerHTML = '<span class="label">J</span>';
+  [L, R].forEach(el => { el.querySelector('.label').style.color = 'inherit'; });
+  const bar = meter(api.play, 8, 5, 0);
+  const held = { L: new Set(), R: new Set() }, keys = new Set(); let ms = 0;
+  [[L, 'L'], [R, 'R']].forEach(([el, k]) => {
+    el.addEventListener('pointerdown', e => { held[k].add(e.pointerId); try { el.setPointerCapture(e.pointerId); } catch (_) {} });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => el.addEventListener(t, e => held[k].delete(e.pointerId)));
+    el.addEventListener('contextmenu', e => e.preventDefault());
+  });
+  api.key(e => { const k = e.key.toLowerCase(); if (k === 'f' || k === 'j') keys.add(k); });
+  addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+  addEventListener('blur', () => keys.clear());
+  api.frame(dt => {
+    const l = held.L.size > 0 || keys.has('f'), r = held.R.size > 0 || keys.has('j');
+    L.classList.toggle('lit', l); R.classList.toggle('lit', r); L.style.color = l ? 'var(--paper)' : ''; R.style.color = r ? 'var(--paper)' : '';
+    if (api.isDone) return;
+    ms = l && r ? ms + dt : Math.max(0, ms - dt); bar(Math.floor(ms / 250));
+    if (ms >= 2000) api.done();
+  });
+};
+B.WAVE = api => {
+  api.dir('(wave from side to side)');
+  const row = []; for (let i = 0; i < 8; i++) row.push(cell(api.play, 'mcell', i, 2));
+  const zone = cell(api.play, 'press', 0, 0, 8, 6); zone.style.cursor = 'ew-resize'; zone.dataset.cue = '';
+  const waves = meter(api.play, 5, 5);
+  let dir = 0, from = null, n = 0, lastCol = -1;
+  const ripple = d => row.forEach((c, i) => c.animate([{ background: 'var(--ink)' }, { background: 'var(--paper)' }], { duration: 260, delay: (d > 0 ? i : 7 - i) * 45, fill: 'backwards' }));
+  zone.addEventListener('pointermove', e => {
+    if (api.isDone) return;
+    const [x] = local(api.play, e), cx = x / G.cw, col = clamp(Math.floor(cx), 0, 7);
+    if (col !== lastCol) { row.forEach((c, i) => c.classList.toggle('on', i === col)); lastCol = col; }
+    if (from === null) { from = cx; return; }
+    const d = Math.sign(cx - from);
+    if (d && d !== dir && Math.abs(cx - from) > .2) {
+      if (dir !== 0) { n++; waves(n); ripple(d); if (n >= 5) { row.forEach(c => c.classList.remove('on')); api.done(); } }
+      dir = d; from = cx;
+    } else if ((cx - from) * dir > 0) from = cx;
+  });
+  zone.addEventListener('pointerleave', () => { from = null; });
+};
+B.FOLLOW = api => {
+  api.dir('(follow the square)');
+  const dot = cell(api.play, 'c-ink', 0, 0);
+  const zone = cell(api.play, 'press', 0, 0, 8, 5); zone.dataset.cue = '';
+  const secs = meter(api.play, 5, 5);
+  const PATH = [[1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [6, 2], [6, 3], [5, 3], [4, 3], [3, 3], [2, 3], [1, 3], [1, 2]];
+  let k = 0, acc = 0, px = -9, py = -9, ms = 0;
+  zone.addEventListener('pointermove', e => { const [x, y] = local(api.play, e); px = Math.floor(x / G.cw); py = Math.floor(y / G.ch); });
+  zone.addEventListener('pointerleave', () => { px = py = -9; });
+  api.frame(dt => {
+    acc += dt; if (acc >= 520) { acc = 0; k = (k + 1) % PATH.length; }
+    const [x, y] = PATH[k]; stepTo(dot, x, y);
+    if (api.isDone) return;
+    const near = Math.max(Math.abs(px - x), Math.abs(py - y)) <= 1;
+    dot.classList.toggle('glow', near);
+    if (near) { ms += dt; secs(Math.floor(ms / 1000)); if (ms >= 5000) api.done(); }
+  });
+};
+B.MIRROR = api => {
+  api.dir('(draw on one side)');
+  const grid = []; for (let y = 0; y < 5; y++) for (let x = 0; x < 8; x++) grid.push(cell(api.play, 'paint', x, y));
+  const axis = cell(api.play, '', 4, 0, 0, 5); axis.style.borderLeft = '1px dashed var(--ink)'; axis.style.pointerEvents = 'none';
+  const zone = cell(api.play, 'press', 0, 0, 8, 5); zone.dataset.cue = ''; zone.style.cursor = 'crosshair';
+  let down = false, count = 0;
+  const paint = e => {
+    const [x, y] = local(api.play, e), cx = Math.floor(x / G.cw), cy = Math.floor(y / G.ch);
+    if (cx < 0 || cx > 7 || cy < 0 || cy > 4) return;
+    [cx, 7 - cx].forEach(c => { const g = grid[cy * 8 + c]; if (!g.classList.contains('on')) { g.classList.add('on'); count++; } });
+    if (count >= 12) api.done();
+  };
+  zone.addEventListener('pointerdown', e => { down = true; try { zone.setPointerCapture(e.pointerId); } catch (_) {} paint(e); });
+  zone.addEventListener('pointermove', e => { if (down) paint(e); });
+  ['pointerup', 'pointercancel'].forEach(t => zone.addEventListener(t, () => { down = false; }));
+};
+B.ECHO = api => {
+  api.dir('(watch it, then repeat it)');
+  const pads = [0, 1, 2, 3].map(i => { const p = cell(api.play, 'pad', i * 2, 1, 2, 2, 'button'); p.setAttribute('aria-label', 'Pad ' + (i + 1)); return p; });
+  const seq = shuffle([0, 1, 2, 3]); let k = 0, playing = false;
+  const flash = i => { pads[i].classList.add('lit'); setTimeout(() => pads[i].classList.remove('lit'), 320); };
+  const playSeq = () => { playing = true; k = 0; seq.forEach((i, j) => setTimeout(() => flash(i), 500 + j * 560)); setTimeout(() => { playing = false; pads.forEach(p => { p.dataset.cue = ''; }); }, 500 + seq.length * 560); };
+  pads.forEach((p, i) => p.addEventListener('click', () => {
+    if (playing || api.isDone) return; flash(i);
+    if (i !== seq[k]) { nudge(p); setTimeout(playSeq, 500); return; }
+    k++; if (k === seq.length) setTimeout(() => api.done(), 300);
+  }));
+  api.on('enter', () => { if (!api.isDone) playSeq(); });
+};
+B.HUG = api => {
+  api.dir('(bring them together)');
+  const A = cell(api.play, 'c-ink grab', 1, 2, 1, 2), Bx = cell(api.play, 'c-ink grab', 6, 2, 1, 2); A.dataset.cue = ''; Bx.dataset.cue = '';
+  const st = { a: 1, b: 6 };
+  const hook = (el, me) => { let s = 0; drag(el, {
+    start() { s = st[me]; },
+    move(e, dx) { if (api.isDone) return; let x = Math.round(s + dx / G.cw); x = me === 'a' ? clamp(x, 0, st.b - 1) : clamp(x, st.a + 1, 7); st[me] = x; pos(el, x); if (st.b - st.a === 1) api.done(); },
+  }); };
+  hook(A, 'a'); hook(Bx, 'b');
+};
+B.ANSWER = api => {
+  api.dir('(it’s ringing · pick up)');
+  const ph = cell(api.play, 'c-frame tap', 3, 0, 2, 4, 'button'); ph.style.background = 'var(--paper)'; ph.dataset.cue = ''; ph.setAttribute('aria-label', 'Answer');
+  const scr = cell(ph, 'c-wash', 0, 1, 2, 2); scr.style.position = 'absolute';
+  const ringers = [cell(api.play, 'mcell', 2, 1), cell(api.play, 'mcell', 5, 1), cell(api.play, 'mcell', 2, 2), cell(api.play, 'mcell', 5, 2)];
+  const talk = [6, 7].map(x => cell(api.play, 'mcell', x, 1));
+  let answered = false;
+  api.every(220, () => { if (answered) return; const k = Math.floor(performance.now() / 220) % 2; ringers.forEach((r, i) => r.classList.toggle('on', (i % 2) === k)); });
+  ph.addEventListener('click', () => {
+    if (api.isDone) return; answered = true; ringers.forEach(r => r.classList.remove('on'));
+    talk.forEach((t, i) => setTimeout(() => t.classList.add('on'), 200 + i * 200)); api.done();
+  });
+};
+B.INVITE = api => {
+  api.dir('(send this page to someone)');
+  const b = cell(api.play, 'bigbtn tap', 2, 1, 4, 1, 'button'); b.innerHTML = '<span>SEND</span>'; b.dataset.cue = ''; b.style.touchAction = 'manipulation';
+  const plane = cell(api.play, 'c-ink', 3, 3);
+  const fly = () => { plane.animate([{ transform: 'none', opacity: 1 }, { transform: 'translate(calc(var(--cw) * 4), calc(var(--ch) * -3))', opacity: 1 }], { duration: 600, easing: 'steps(4, end)', fill: 'forwards' }); api.done(); };
+  b.addEventListener('click', async () => {
+    if (api.isDone) return;
+    const url = location.href.split('#')[0];
+    try { if (navigator.share) await navigator.share({ title: '02 Verbing', url }); else if (navigator.clipboard) await navigator.clipboard.writeText(url); fly(); }
+    catch (e) { if (e && e.name !== 'AbortError') fly(); }
+  });
+};
+
+/* -------- CURTAIN CALL -------- */
+B.APPLAUD = api => {
+  api.dir('(clap eight times, fast)');
+  const c = cell(api.play, 'c-frame tap', 2, 1, 4, 3, 'button'); c.style.background = 'var(--paper)'; c.dataset.cue = ''; c.setAttribute('aria-label', 'Clap');
+  const claps = meter(api.play, 8, 5, 0); const ts = [];
+  const clap = () => {
+    if (api.isDone) return;
+    const t = performance.now(); ts.push(t); while (ts.length && t - ts[0] > 4000) ts.shift(); claps(ts.length);
+    c.animate([{ background: 'var(--ink)' }, { background: 'var(--paper)' }], { duration: 160, easing: 'steps(1, end)' });
+    if (ts.length >= 8) api.done();
+  };
+  c.addEventListener('pointerdown', clap);
+  api.key(e => { if (e.key === ' ' && !e.repeat) { e.preventDefault(); clap(); } });
+  api.every(300, () => { const t = performance.now(); while (ts.length && t - ts[0] > 4000) ts.shift(); if (!api.isDone) claps(ts.length); });
+};
+B.BOW = api => {
+  api.dir('(take a bow · pull the head down)');
+  const STAND = [[3, 0], [3, 1], [3, 2], [3, 3], [3, 4]], BOWED = [[5, 2], [4, 2], [3, 2], [3, 3], [3, 4]];
+  const parts = STAND.map(([x, y], i) => { const c = cell(api.play, i === 0 ? 'headcell' : 'c-ink', x, y); return c; });
+  const zone = cell(api.play, 'grab', 2, 0, 3, 3); zone.dataset.cue = '';
+  const pose = P => parts.forEach((c, i) => pos(c, P[i][0], P[i][1]));
+  drag(zone, {
+    move(e, dx, dy) { if (!api.isDone) pose(dy > G.ch * .8 ? BOWED : STAND); },
+    end(e, dx, dy, moved) { if (api.isDone) return; if (dy > G.ch * .8 || !moved) { pose(BOWED); setTimeout(() => { pose(STAND); api.done(); }, 700); } else pose(STAND); },
+  });
+};
+B.SIGN = api => {
+  api.dir('(sign your name)');
+  const row = cell(api.play, '', 1, 4, 6, 1); row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center';
+  row.innerHTML = '<input class="input-line" maxlength="16" autocomplete="off" aria-label="Your name" style="flex:1;text-transform:uppercase"><button class="btn" type="button">SIGN</button>';
+  const inp = row.querySelector('input'), btn = row.querySelector('button'); inp.dataset.cue = '';
+  const cells = []; for (let i = 0; i < 16; i++) cells.push(cell(api.play, 'namecell', i % 8, Math.floor(i / 8)));
+  const show = v => cells.forEach((c, i) => { c.textContent = v[i] && v[i] !== ' ' ? v[i] : ''; });
+  const sign = () => {
+    const v = inp.value.trim().toUpperCase().slice(0, 16); if (!v) { inp.focus(); nudge(row); return; }
+    show(v); inp.value = ''; inp.blur();
+    try { const all = JSON.parse(localStorage.getItem('verbing-readers') || '[]'); all.push({ name: v, t: Date.now() }); localStorage.setItem('verbing-readers', JSON.stringify(all)); } catch (e) {}
+    api.done();
+  };
+  btn.addEventListener('click', sign); inp.addEventListener('keydown', e => { if (e.key === 'Enter') sign(); });
+  api.on('enter', () => { if (finePointer) setTimeout(() => inp.focus({ preventScroll: true }), 60); });
+};
+B.LOWER = api => {
+  api.dir('(pull the curtain down)');
+  const cur = cell(api.play, 'curtain', 0, 0, 8, 1); cur.dataset.cue = '';
+  let h = 1, base = 1;
+  const set = v => { h = clamp(Math.round(v), 1, 6); pos(cur, null, null, null, h); if (h === 6 && !api.isDone) api.done(); };
+  drag(cur, { start() { base = h; }, move(e, dx, dy) { if (!api.isDone) set(base + dy / G.ch); }, end(e, dx, dy, moved) { if (!moved && !api.isDone) set(h + 1); } });
+};
+
+
+/* ================= START ================= */
+navPrev.innerHTML = ico('left'); navNext.innerHTML = ico('right');
+relayout();
+route(false);
+})();
+</script>
+</body>
+</html>
